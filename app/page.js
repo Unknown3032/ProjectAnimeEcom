@@ -1,23 +1,23 @@
-import Footer from "@/Components/Footer/Footer";
-import CategorySection from "@/Components/Home/CategorySection";
-import FeaturesSection from "@/Components/Home/FeaturedSection";
+import CategoriesSection from "@/Components/Home/CategoriesSection";
+import CustomerReviews from "@/Components/Home/CustomerReviews";
+import FeaturedProducts from "@/Components/Home/FeaturedProducts";
 import HeroSlider from "@/Components/Home/HeroSlider";
 import ProductShowcase from "@/Components/Home/ProductShowcase";
-import ReviewSection from "@/Components/Home/ReviewSection";
-import TrendingSection from "@/Components/Home/TrendingSection";
+import TrendingProducts from "@/Components/Home/TrendingProducts";
+import WhyChooseUs from "@/Components/Home/WhyChooseUs";
 
 export default function Home() {
   return (
     <div className="">
       <div>
         <HeroSlider />
-        <ProductShowcase />
-        <CategorySection />
-        <FeaturesSection />
-        <TrendingSection />
-        <ReviewSection />
+        {/* <ProductShowcase /> */}
+        <FeaturedProducts />
+        <CategoriesSection />
+        <TrendingProducts />
+        <WhyChooseUs />
+        <CustomerReviews />
       </div>
-
     </div>
   );
 }
