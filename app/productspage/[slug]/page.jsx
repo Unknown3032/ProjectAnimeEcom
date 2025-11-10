@@ -5,11 +5,11 @@ import { useParams } from "next/navigation";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import ProductBanner from "@/components/ProductsPage/ProductBanner";
-import ProductGrid from "@/components/ProductsPage/ProductGrid";
 import ProductFilter from "@/components/ProductsPage/ProductFilter";
 import AdvancedFilters from "@/components/ProductsPage/AdvancedFilters";
 import ActiveFilters from "@/components/ProductsPage/ActiveFilters";
 import { getProductsBySlug, getCategoryData } from "@/lib/productsData";
+import ProductGrid from "@/Components/ProductsPage/ProductGrid";
 
 gsap.registerPlugin(ScrollTrigger);
 
