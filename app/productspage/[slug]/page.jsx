@@ -9,7 +9,7 @@ import ProductFilter from "@/components/ProductsPage/ProductFilter";
 import AdvancedFilters from "@/components/ProductsPage/AdvancedFilters";
 import ActiveFilters from "@/components/ProductsPage/ActiveFilters";
 import { getProductsBySlug, getCategoryData } from "@/lib/productsData";
-import ProductGrid from "@/Components/ProductsPage/ProductGrid";
+// import ProductGrid from "@/Components/ProductsPage/ProductGrid";
 
 gsap.registerPlugin(ScrollTrigger);
 
