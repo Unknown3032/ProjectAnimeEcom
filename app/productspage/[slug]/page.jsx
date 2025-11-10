@@ -4,12 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-// import ProductBanner from "@/components/ProductsPage/ProductBanner";
-// import ProductFilter from "@/components/ProductsPage/ProductFilter";
-// import AdvancedFilters from "@/components/ProductsPage/AdvancedFilters";
-// import ActiveFilters from "@/components/ProductsPage/ActiveFilters";
-// import { getProductsBySlug, getCategoryData } from "@/lib/productsData";
-// import ProductGrid from "@/Components/ProductsPage/ProductGrid";
+import ProductBanner from "@/components/ProductsPage/ProductBanner";
+import ProductFilter from "@/components/ProductsPage/ProductFilter";
+import AdvancedFilters from "@/components/ProductsPage/AdvancedFilters";
+import ActiveFilters from "@/components/ProductsPage/ActiveFilters";
+import { getProductsBySlug, getCategoryData } from "@/lib/productsData";
+import ProductGrid from "@/Components/ProductsPage/ProductGrid";
 
 gsap.registerPlugin(ScrollTrigger);
 
