@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated, isAdmin, getUser } from '@/lib/adminAuth.js';
-import DashboardHeader from '@/components/admin/DashboardHeader';
-import StatsCard from '@/components/admin/StatsCard';
-import RecentOrders from '@/components/admin/RecentOrders';
-import TopProducts from '@/components/admin/TopProducts';
-import SalesGraph from '@/components/admin/SalesGraph';
+import DashboardHeader from '../../../Components/admin/DashboardHeader';
+import StatsCard from '../../../Components/admin/StatsCard';
+import RecentOrders from '../../../Components/admin/RecentOrders';
+import TopProducts from '../../../Components/admin/TopProducts';
+import SalesGraph from '../../../Components/admin/SalesGraph';
 import { dashboardStats } from '@/lib/dashboardData';
 
 export default function AdminDashboard() {

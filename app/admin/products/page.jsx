@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { isAuthenticated, isAdmin } from '@/lib/adminAuth.js';
-import DashboardHeader from '@/components/admin/DashboardHeader';
-import ProductsGrid from '@/components/admin/ProductsGrid';
-import ProductsStats from '@/components/admin/ProductsStats';
-import ProductsFilters from '@/components/admin/ProductsFilters';
-import ProductsAnalytics from '@/components/admin/ProductsAnalytics';
+import DashboardHeader from '../../../Components/admin/DashboardHeader';
+import ProductsGrid from '../../../Components/admin/ProductsGrid';
+import ProductsStats from '../../../Components/admin/ProductsStats';
+import ProductsFilters from '../../../Components/admin/ProductsFilters';
+import ProductsAnalytics from '../../../Components/admin/ProductsAnalytics';
 
 export default function ProductsPage() {
   const router = useRouter();

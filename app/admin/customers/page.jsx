@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated, isAdmin } from '@/lib/adminAuth.js';
-import DashboardHeader from '@/components/admin/DashboardHeader';
-import CustomersTable from '@/components/admin/CustomersTable';
-import CustomersStats from '@/components/admin/CustomersStats';
-import CustomersFilters from '@/components/admin/CustomersFilters';
-import CustomersAnalytics from '@/components/admin/CustomersAnalytics';
+import DashboardHeader from '../../../Components/admin/DashboardHeader';
+import CustomersTable from '../../../Components/admin/CustomersTable';
+import CustomersStats from '../../../Components/admin/CustomersStats';
+import CustomersFilters from '../../../Components/admin/CustomersFilters';
+import CustomersAnalytics from '../../../Components/admin/CustomersAnalytics';
 
 export default function CustomersPage() {
   const router = useRouter();

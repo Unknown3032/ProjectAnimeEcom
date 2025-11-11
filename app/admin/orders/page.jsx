@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated, isAdmin } from '@/lib/adminAuth.js';
-import DashboardHeader from '@/components/admin/DashboardHeader';
-import OrdersTable from '@/components/admin/OrdersTable';
-import OrdersStats from '@/components/admin/OrdersStats';
-import OrdersFilters from '@/components/admin/OrdersFilters';
-import OrdersChart from '@/components/admin/OrdersChart';
-import OrdersAnalytics from '@/components/admin/OrdersAnalytics';
+import DashboardHeader from '../../../Components/admin/DashboardHeader';
+import OrdersTable from '../../../Components/admin/OrdersTable';
+import OrdersStats from '../../../Components/admin/OrdersStats';
+import OrdersFilters from '../../../Components/admin/OrdersFilters';
+import OrdersChart from '../../../Components/admin/OrdersChart';
+import OrdersAnalytics from '../../../Components/admin/OrdersAnalytics';
 
 export default function OrdersPage() {
   const router = useRouter();
