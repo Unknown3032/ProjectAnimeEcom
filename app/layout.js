@@ -3,9 +3,9 @@ import MainNav from "@/Components/Header/MainNav";
 import Footer from "@/Components/Footer/Footer";
 import PageTransition from "@/Components/layout/PageTransition";
 import PromoBanner from "@/Components/Header/PromoBanner";
-import ToastProvider from "@/components/providers/ToastProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import ToastProvider from "@/Components/providers/ToastProvider";
 
 export default function RootLayout({ children }) {
   return (
