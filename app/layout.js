@@ -3,7 +3,7 @@ import MainNav from "@/Components/Header/MainNav";
 import Footer from "@/Components/Footer/Footer";
 import PageTransition from "@/Components/layout/PageTransition";
 import PromoBanner from "@/Components/Header/PromoBanner";
-import ToastProvider from "@/components/providers/ToastProvider";
+// import ToastProvider from "@/components/providers/ToastProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 
@@ -25,7 +25,7 @@ export default function RootLayout({ children }) {
 
               <Footer />
             </div>
-            <ToastProvider />
+            {/* <ToastProvider /> */}
           </AuthProvider>
         </CartProvider>
       </body>
