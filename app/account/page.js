@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import authService from '@/services/authService';
-import AccountSidebar from '@/components/account/AccountSidebar';
-import ProfileSection from '@/components/account/ProfileSection';
-import OrdersSection from '@/components/account/OrdersSection';
-import AddressesSection from '@/components/account/AddressesSection';
-import WishlistSection from '@/components/account/WishlistSection';
-import SecuritySection from '@/components/account/SecuritySection';
-import LoyaltySection from '@/components/account/LoyaltySection';
+import AccountSidebar from '../../Components/account/AccountSidebar';
+import ProfileSection from '../../Components/account/ProfileSection';
+import OrdersSection from '../../Components/account/OrdersSection';
+import AddressesSection from '../../Components/account/AddressesSection';
+import WishlistSection from '../../Components/account/WishlistSection';
+import SecuritySection from '../../Components/account/SecuritySection';
+import LoyaltySection from '../../Components/account/LoyaltySection';
 
 export default function MyAccountPage() {
   const router = useRouter();

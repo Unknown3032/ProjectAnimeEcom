@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated, isAdmin } from '@/lib/adminAuth.js';
-import DashboardHeader from '@/components/admin/DashboardHeader';
-import AddProductForm from '@/components/admin/AddProductForm';
+import DashboardHeader from '../../../../Components/admin/DashboardHeader';
+import AddProductForm from '../../../../Components/admin/AddProductForm';
 
 export default function AddProductPage() {
   const router = useRouter();
