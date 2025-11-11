@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated, isAdmin } from '@/lib/adminAuth.js';
-import DashboardHeader from '@/components/admin/DashboardHeader';
-import CustomersTable from '@/components/admin/CustomersTable';
-import CustomersStats from '@/components/admin/CustomersStats';
-import CustomersFilters from '@/components/admin/CustomersFilters';
-import CustomersAnalytics from '@/components/admin/CustomersAnalytics';
+// import DashboardHeader from '@/components/admin/DashboardHeader';
+// import CustomersTable from '@/components/admin/CustomersTable';
+// import CustomersStats from '@/components/admin/CustomersStats';
+// import CustomersFilters from '@/components/admin/CustomersFilters';
+// import CustomersAnalytics from '@/components/admin/CustomersAnalytics';
 
 export default function CustomersPage() {
   const router = useRouter();
@@ -43,54 +43,55 @@ export default function CustomersPage() {
   if (!authorized) return null;
 
   return (
-    <div className="flex-1 bg-gradient-to-br from-white via-white to-black/5 min-h-screen overflow-auto">
-      <DashboardHeader />
+    // <div className="flex-1 bg-gradient-to-br from-white via-white to-black/5 min-h-screen overflow-auto">
+    //   <DashboardHeader />
       
-      <main className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-black mb-2">
-              Customers Management
-            </h1>
-            <p className="text-sm md:text-base text-black/50">
-              Manage and engage with your customer base
-            </p>
-          </div>
+    //   <main className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
+    //     {/* Page Header */}
+    //     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    //       <div>
+    //         <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-black mb-2">
+    //           Customers Management
+    //         </h1>
+    //         <p className="text-sm md:text-base text-black/50">
+    //           Manage and engage with your customer base
+    //         </p>
+    //       </div>
           
-          <div className="flex items-center gap-3">
-            <button className="bg-black/5 text-black px-6 py-3 rounded-xl font-medium hover:bg-black/10 transition-all duration-300 inline-flex items-center gap-2">
-              <span>📊</span>
-              <span>Export Data</span>
-            </button>
+    //       <div className="flex items-center gap-3">
+    //         <button className="bg-black/5 text-black px-6 py-3 rounded-xl font-medium hover:bg-black/10 transition-all duration-300 inline-flex items-center gap-2">
+    //           <span>📊</span>
+    //           <span>Export Data</span>
+    //         </button>
             
-            <button className="bg-black text-white px-6 py-3 rounded-xl font-medium hover:bg-black/90 transition-all duration-300 hover:shadow-lg inline-flex items-center gap-2 group">
-              <span>✉️</span>
-              <span>Send Email</span>
-            </button>
-          </div>
-        </div>
+    //         <button className="bg-black text-white px-6 py-3 rounded-xl font-medium hover:bg-black/90 transition-all duration-300 hover:shadow-lg inline-flex items-center gap-2 group">
+    //           <span>✉️</span>
+    //           <span>Send Email</span>
+    //         </button>
+    //       </div>
+    //     </div>
 
-        {/* Stats Overview */}
-        <CustomersStats />
+    //     {/* Stats Overview */}
+    //     <CustomersStats />
 
-        {/* Analytics Section */}
-        <div className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <CustomersAnalytics />
-          </div>
-          <div>
-            <TopCustomers />
-          </div>
-        </div>
+    //     {/* Analytics Section */}
+    //     <div className="grid lg:grid-cols-3 gap-6">
+    //       <div className="lg:col-span-2">
+    //         <CustomersAnalytics />
+    //       </div>
+    //       <div>
+    //         <TopCustomers />
+    //       </div>
+    //     </div>
 
-        {/* Filters */}
-        <CustomersFilters />
+    //     {/* Filters */}
+    //     <CustomersFilters />
 
-        {/* Customers Table */}
-        <CustomersTable />
-      </main>
-    </div>
+    //     {/* Customers Table */}
+    //     <CustomersTable />
+    //   </main>
+    // </div>
+    <></>
   );
 }
 
