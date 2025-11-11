@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated, isAdmin, getUser } from '@/lib/adminAuth.js';
-import DashboardHeader from '@/components/admin/DashboardHeader';
-import StatsCard from '@/components/admin/StatsCard';
-import RecentOrders from '@/components/admin/RecentOrders';
+// import DashboardHeader from '@/components/admin/DashboardHeader';
+// import StatsCard from '@/components/admin/StatsCard';
+// import RecentOrders from '@/components/admin/RecentOrders';
 // import TopProducts from '@/components/admin/TopProducts';
-import SalesGraph from '@/components/admin/SalesGraph';
-import { dashboardStats } from '@/lib/dashboardData';
+// import SalesGraph from '@/components/admin/SalesGraph';
+// import { dashboardStats } from '@/lib/dashboardData';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -54,7 +54,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex-1 bg-gradient-to-br from-white via-white to-black/5 min-h-screen overflow-auto">
-      <DashboardHeader />
+      {/* <DashboardHeader /> */}
 
       <main className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
         {/* Stats Grid */}
@@ -66,13 +66,13 @@ export default function AdminDashboard() {
 
         {/* Sales Graph - Full Width */}
         <div className="w-full">
-          <SalesGraph />
+          {/* <SalesGraph /> */}
         </div>
 
         {/* Content Grid */}
         <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <RecentOrders />
+            {/* <RecentOrders /> */}
           </div>
           <div className="space-y-6">
             {/* <TopProducts /> */}
