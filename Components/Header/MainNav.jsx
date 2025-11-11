@@ -1,17 +1,27 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import gsap from "gsap";
+import { BiLogIn, BiLogOut, BiUser } from "react-icons/bi";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
+import { isAdmin } from "@/lib/adminAuth.js";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   const headerRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Get auth and cart context
+  const { user, logout, isAuthenticated } = useAuth();
+  const { getCartCount } = useCart();
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -19,6 +29,30 @@ export default function Header() {
     { href: "/about", label: "About" },
     { href: "/contact", label: "Contact" },
   ];
+
+  // Update cart count
+  useEffect(() => {
+    const updateCartCount = () => {
+      setCartCount(getCartCount());
+    };
+
+    updateCartCount();
+
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      updateCartCount();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    // Poll for cart updates (for same-tab updates)
+    const interval = setInterval(updateCartCount, 500);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [getCartCount]);
 
   // Handle scroll
   useEffect(() => {
@@ -84,6 +118,11 @@ export default function Header() {
     };
   }, [isMenuOpen]);
 
+  const handleLogout = () => {
+    logout();
+    setIsMenuOpen(false);
+  };
+
   return (
     <>
       <header
@@ -140,31 +179,15 @@ export default function Header() {
 
               {/* Desktop Actions */}
               <div className="hidden md:flex items-center gap-3 lg:gap-4">
-                <button
-                  className="p-2 hover:bg-black/5 rounded-full transition-colors"
-                  aria-label="Search"
-                >
-                  <svg
-                    className="w-4 h-4 lg:w-5 lg:h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </button>
+                {/* Cart */}
                 <Link
-                href={'/cart'}
-                  className="p-2 hover:bg-black/5 rounded-full transition-colors relative"
+                  href="/cart"
+                  className="p-2 hover:bg-black/5 rounded-full transition-colors relative "
                   aria-label="Shopping cart"
+                  title={`Cart (${cartCount} items)`}
                 >
                   <svg
-                    className="w-4 h-4 lg:w-5 lg:h-5"
+                    className="w-6 h-6 lg:w-6 lg:h-6"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -176,10 +199,60 @@ export default function Header() {
                       d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
                     />
                   </svg>
-                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 lg:w-4 lg:h-4 bg-black text-white text-[10px] lg:text-xs flex items-center justify-center rounded-full font-medium">
-                    0
-                  </span>
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 lg:w-4 lg:h-4 bg-black text-white text-[10px] lg:text-xs flex items-center justify-center rounded-full font-medium">
+                      {cartCount}
+                    </span>
+                  )}
                 </Link>
+
+                {/* Auth Actions */}
+                {isAuthenticated ? (
+                  <>
+                    {/* User Profile */}
+                    <Link
+                      href={`/${isAdmin()?"admin/dashboard":"myaccount"}`}
+                      className="p-2 hover:bg-black/5 rounded-full transition-colors group relative"
+                      aria-label="Profile"
+                      title={user?.firstName || "Profile"}
+                    >
+                      <BiUser className="text-2xl" />
+                      <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                        {user?.firstName}
+                      </span>
+                    </Link>
+
+                    {/* Logout */}
+                    <button
+                      onClick={handleLogout}
+                      className="p-2 hover:bg-black/5 rounded-full transition-colors cursor-pointer"
+                      aria-label="Logout"
+                      title="Logout"
+                    >
+                      <BiLogOut className="text-2xl" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Login */}
+                    <Link
+                      href="/signin"
+                      className="p-2 cursor-pointer hover:bg-black/5 rounded-full transition-colors"
+                      aria-label="Login"
+                      title="Login"
+                    >
+                      <BiLogIn className="text-2xl" />
+                    </Link>
+
+                    {/* Signup */}
+                    <Link
+                      href="/signup"
+                      className="px-4 py-2 bg-black text-white text-xs uppercase tracking-wider hover:bg-black/90 transition-colors"
+                    >
+                      Sign Up
+                    </Link>
+                  </>
+                )}
               </div>
 
               {/* Mobile Menu Button */}
@@ -218,6 +291,24 @@ export default function Header() {
         style={{ transform: "translateX(-100%)" }}
       >
         <div className="pt-28 sm:pt-32 px-6 h-full overflow-y-auto">
+          {/* User Info (if logged in) */}
+          {isAuthenticated && user && (
+            <div className="mobile-link mb-6 pb-6 border-b border-black/10">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center text-xl font-light">
+                  {user.firstName?.charAt(0)}
+                  {user.lastName?.charAt(0)}
+                </div>
+                <div>
+                  <p className="font-medium">
+                    {user.firstName} {user.lastName}
+                  </p>
+                  <p className="text-sm text-black/60">{user.email}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <nav className="space-y-2">
             {navLinks.map((link) => (
               <Link
@@ -230,15 +321,51 @@ export default function Header() {
                 {link.label}
               </Link>
             ))}
+
+            {/* Dashboard Link (if logged in) */}
+            {isAuthenticated && (
+              <Link
+                href={`/${isAdmin()?"admin/dashboard":"account"}`}
+                className="mobile-link block text-2xl sm:text-3xl font-light py-3 sm:py-4 border-b border-black/10 transition-colors text-black/60"
+              >
+                {isAdmin()?"Dashboard":"Myaccount"}
+              </Link>
+            )}
           </nav>
 
           <div className="mobile-link mt-8 space-y-3 sm:space-y-4">
-            <button className="w-full py-3 sm:py-4 border-2 border-black text-black uppercase tracking-wider text-sm hover:bg-black hover:text-white transition-all duration-300">
-              Search Products
-            </button>
-            <button className="w-full py-3 sm:py-4 bg-black text-white uppercase tracking-wider text-sm hover:bg-white hover:text-black border-2 border-black transition-all duration-300">
-              View Cart (0)
-            </button>
+            {/* Cart Button */}
+            <Link
+              href="/cart"
+              className="w-full py-3 sm:py-4 border-2 border-black text-black uppercase tracking-wider text-sm hover:bg-black hover:text-white transition-all duration-300 block text-center"
+            >
+              View Cart ({cartCount})
+            </Link>
+
+            {/* Auth Buttons */}
+            {isAuthenticated ? (
+              <button
+                onClick={handleLogout}
+                className="w-full py-3 sm:py-4 bg-black text-white uppercase tracking-wider text-sm hover:bg-white hover:text-black border-2 border-black transition-all duration-300"
+              >
+                Logout
+              </button>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="w-full py-3 sm:py-4 bg-black text-white uppercase tracking-wider text-sm hover:bg-white hover:text-black border-2 border-black transition-all duration-300 block text-center"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="w-full py-3 sm:py-4 border-2 border-black text-black uppercase tracking-wider text-sm hover:bg-black hover:text-white transition-all duration-300 block text-center"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Social */}
