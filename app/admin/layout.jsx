@@ -1,4 +1,4 @@
-// import Sidebar from '@/components/admin/Sidebar';
+import Sidebar from '@/components/admin/Sidebar';
 
 export default function AdminLayout({ children }) {
 
@@ -6,7 +6,7 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className="flex min-h-screen bg-white">
-      {/* <Sidebar /> */}
+      <Sidebar />
       {children}
     </div>
   );
