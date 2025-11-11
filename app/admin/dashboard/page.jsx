@@ -6,7 +6,7 @@ import { isAuthenticated, isAdmin, getUser } from '@/lib/adminAuth.js';
 import DashboardHeader from '@/components/admin/DashboardHeader';
 import StatsCard from '@/components/admin/StatsCard';
 import RecentOrders from '@/components/admin/RecentOrders';
-import TopProducts from '@/components/admin/TopProducts';
+// import TopProducts from '@/components/admin/TopProducts';
 import SalesGraph from '@/components/admin/SalesGraph';
 import { dashboardStats } from '@/lib/dashboardData';
 
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
             <RecentOrders />
           </div>
           <div className="space-y-6">
-            <TopProducts />
+            {/* <TopProducts /> */}
           </div>
         </div>
       </main>
