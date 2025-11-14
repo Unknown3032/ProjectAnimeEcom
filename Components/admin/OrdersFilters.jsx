@@ -8,14 +8,31 @@ const OrdersFilters = ({ onFilterChange }) => {
   const [activeStatus, setActiveStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState('all');
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/admin/orders/stats?period=all');
+      const data = await response.json();
+      if (data.success) {
+        setStats(data.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
 
   const statuses = [
-    { value: 'all', label: 'All Orders', count: '2,847' },
-    { value: 'pending', label: 'Pending', count: '124' },
-    { value: 'processing', label: 'Processing', count: '89' },
-    { value: 'shipped', label: 'Shipped', count: '156' },
-    { value: 'delivered', label: 'Delivered', count: '2,406' },
-    { value: 'cancelled', label: 'Cancelled', count: '72' },
+    { value: 'all', label: 'All Orders', count: stats?.totalOrders || '0' },
+    { value: 'pending', label: 'Pending', count: stats?.pending || '0' },
+    { value: 'processing', label: 'Processing', count: stats?.processing || '0' },
+    { value: 'shipped', label: 'Shipped', count: stats?.shipped || '0' },
+    { value: 'delivered', label: 'Delivered', count: stats?.delivered || '0' },
+    { value: 'cancelled', label: 'Cancelled', count: stats?.cancelled || '0' },
   ];
 
   const dateRanges = [
@@ -23,7 +40,6 @@ const OrdersFilters = ({ onFilterChange }) => {
     { value: 'today', label: 'Today' },
     { value: '7days', label: 'Last 7 Days' },
     { value: '30days', label: 'Last 30 Days' },
-    { value: 'custom', label: 'Custom Range' },
   ];
 
   useEffect(() => {
@@ -45,6 +61,16 @@ const OrdersFilters = ({ onFilterChange }) => {
     onFilterChange?.({ status, search: searchQuery, dateRange });
   };
 
+  const handleSearchChange = (search) => {
+    setSearchQuery(search);
+    onFilterChange?.({ status: activeStatus, search, dateRange });
+  };
+
+  const handleDateRangeChange = (range) => {
+    setDateRange(range);
+    onFilterChange?.({ status: activeStatus, search: searchQuery, dateRange: range });
+  };
+
   return (
     <div ref={containerRef} className="bg-white rounded-2xl p-6 shadow-lg border border-black/5 space-y-6">
       {/* Search Bar */}
@@ -52,9 +78,9 @@ const OrdersFilters = ({ onFilterChange }) => {
         <div className="flex-1 relative">
           <input
             type="text"
-            placeholder="Search by order ID, customer name, or email..."
+            placeholder="Search by order ID, customer name..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full px-4 py-3 pl-12 bg-black/5 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all text-sm"
           />
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-black/40">
@@ -64,7 +90,7 @@ const OrdersFilters = ({ onFilterChange }) => {
 
         <select
           value={dateRange}
-          onChange={(e) => setDateRange(e.target.value)}
+          onChange={(e) => handleDateRangeChange(e.target.value)}
           className="px-4 py-3 bg-black/5 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all text-sm cursor-pointer"
         >
           {dateRanges.map((range) => (

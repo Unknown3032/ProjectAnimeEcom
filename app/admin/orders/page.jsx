@@ -14,6 +14,11 @@ export default function OrdersPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const [filters, setFilters] = useState({
+    status: 'all',
+    search: '',
+    dateRange: 'all'
+  });
 
   useEffect(() => {
     if (!isAuthenticated()) {
@@ -29,6 +34,24 @@ export default function OrdersPage() {
     setAuthorized(true);
     setLoading(false);
   }, [router]);
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+  };
+
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/admin/orders/export');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `orders-${new Date().toISOString()}.csv`;
+      a.click();
+    } catch (error) {
+      console.error('Export error:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -59,7 +82,10 @@ export default function OrdersPage() {
             </p>
           </div>
           
-          <button className="bg-black text-white px-6 py-3 rounded-xl font-medium hover:bg-black/90 transition-all duration-300 hover:shadow-lg inline-flex items-center gap-2 group w-fit">
+          <button 
+            onClick={handleExport}
+            className="bg-black text-white px-6 py-3 rounded-xl font-medium hover:bg-black/90 transition-all duration-300 hover:shadow-lg inline-flex items-center gap-2 group w-fit"
+          >
             <span>Export Orders</span>
             <span className="group-hover:translate-x-1 transition-transform">→</span>
           </button>
@@ -79,12 +105,11 @@ export default function OrdersPage() {
         </div>
 
         {/* Filters */}
-        <OrdersFilters />
+        <OrdersFilters onFilterChange={handleFilterChange} />
 
         {/* Orders Table */}
-        <OrdersTable />
+        <OrdersTable filters={filters} />
       </main>
     </div>
-    
   );
 }

@@ -1,211 +1,160 @@
-"use client";
-import OrderTimeline from './OrderTimeline';
+'use client';
 
-import { useEffect, useRef } from "react";
-import { gsap } from "gsap";
+import { useState } from 'react';
 
-const OrderDetailsModal = ({ order, onClose }) => {
-  const modalRef = useRef(null);
-  const contentRef = useRef(null);
+const OrderDetailsModal = ({ order, onClose, onStatusUpdate }) => {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [newStatus, setNewStatus] = useState(order.status);
 
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.from(modalRef.current, {
-        opacity: 0,
-        duration: 0.3,
-      });
-
-      gsap.from(contentRef.current, {
-        scale: 0.9,
-        opacity: 0,
-        duration: 0.4,
-        ease: "power2.out",
-      });
-    });
-
-    return () => ctx.revert();
-  }, []);
-
-  const handleClose = () => {
-    gsap.to(contentRef.current, {
-      scale: 0.9,
-      opacity: 0,
-      duration: 0.3,
-      ease: "power2.in",
-    });
-
-    gsap.to(modalRef.current, {
-      opacity: 0,
-      duration: 0.3,
-      onComplete: onClose,
-    });
+  const handleStatusUpdate = async () => {
+    setIsUpdating(true);
+    await onStatusUpdate(order._id, newStatus);
+    setIsUpdating(false);
+    onClose();
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      delivered: "bg-black text-white",
-      shipped: "bg-black/80 text-white",
-      processing: "bg-black/60 text-white",
-      pending: "bg-black/20 text-black",
-      cancelled: "bg-black/10 text-black/40",
-    };
-    return colors[status] || "bg-black/5 text-black/40";
-  };
+  const statuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
   return (
-    <div
-      ref={modalRef}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={handleClose}
-    >
-      <div
-        ref={contentRef}
-        className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="p-6 border-b border-black/5 flex items-center justify-between">
+        <div className="sticky top-0 bg-white border-b border-black/10 p-6 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-black mb-1">
-              Order Details
-            </h2>
-            <p className="text-sm text-black/50">{order.id}</p>
+            <h2 className="text-2xl font-bold text-black">{order.orderNumber}</h2>
+            <p className="text-sm text-black/50">
+              {new Date(order.createdAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
           </div>
           <button
-            onClick={handleClose}
-            className="w-10 h-10 rounded-full bg-black/5 hover:bg-black/10 transition-colors flex items-center justify-center group"
+            onClick={onClose}
+            className="w-10 h-10 rounded-full bg-black/5 hover:bg-black/10 transition-colors flex items-center justify-center"
           >
-            <span className="text-xl group-hover:rotate-90 transition-transform duration-300">
-              ✕
-            </span>
+            ✕
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)] space-y-6">
-          {/* Status & Date */}
-          <div className="flex items-center justify-between flex-wrap gap-4 p-4 bg-black/5 rounded-xl">
-            <div>
-              <p className="text-xs text-black/50 mb-1">Status</p>
-              <span
-                className={`px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(
-                  order.status
-                )}`}
-              >
-                {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-              </span>
-            </div>
-            <div>
-              <p className="text-xs text-black/50 mb-1">Order Date</p>
-              <p className="text-sm font-medium text-black">
-                {new Date(order.date).toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-black/50 mb-1">Payment Method</p>
-              <p className="text-sm font-medium text-black">
-                {order.paymentMethod}
-              </p>
+        <div className="p-6 space-y-6">
+          {/* Customer Info */}
+          <div>
+            <h3 className="text-lg font-bold text-black mb-4">Customer Information</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-black/5 rounded-xl p-4">
+                <p className="text-xs text-black/50 mb-1">Name</p>
+                <p className="text-sm font-medium text-black">
+                  {order.shippingAddress?.firstName} {order.shippingAddress?.lastName}
+                </p>
+              </div>
+              <div className="bg-black/5 rounded-xl p-4">
+                <p className="text-xs text-black/50 mb-1">Email</p>
+                <p className="text-sm font-medium text-black">{order.user?.email}</p>
+              </div>
+              <div className="bg-black/5 rounded-xl p-4">
+                <p className="text-xs text-black/50 mb-1">Phone</p>
+                <p className="text-sm font-medium text-black">{order.shippingAddress?.phone}</p>
+              </div>
+              <div className="bg-black/5 rounded-xl p-4">
+                <p className="text-xs text-black/50 mb-1">Payment Method</p>
+                <p className="text-sm font-medium text-black">{order.paymentMethod}</p>
+              </div>
             </div>
           </div>
 
-          {/* Customer Info */}
-          <div className="p-4 bg-black/5 rounded-xl">
-            <h3 className="text-sm font-semibold text-black mb-3">
-              Customer Information
-            </h3>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-black/10 flex items-center justify-center text-2xl">
-                {order.customer.avatar}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-black">
-                  {order.customer.name}
-                </p>
-                <p className="text-xs text-black/50">{order.customer.email}</p>
-              </div>
+          {/* Shipping Address */}
+          <div>
+            <h3 className="text-lg font-bold text-black mb-4">Shipping Address</h3>
+            <div className="bg-black/5 rounded-xl p-4">
+              <p className="text-sm text-black">
+                {order.shippingAddress?.street}
+                {order.shippingAddress?.apartment && `, ${order.shippingAddress.apartment}`}
+              </p>
+              <p className="text-sm text-black">
+                {order.shippingAddress?.city}, {order.shippingAddress?.state} {order.shippingAddress?.zipCode}
+              </p>
+              <p className="text-sm text-black">{order.shippingAddress?.country}</p>
             </div>
           </div>
 
           {/* Order Items */}
           <div>
-            <h3 className="text-sm font-semibold text-black mb-3">
-              Order Items
-            </h3>
+            <h3 className="text-lg font-bold text-black mb-4">Order Items</h3>
             <div className="space-y-3">
-              {order.items.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-4 p-4 bg-black/5 rounded-xl hover:bg-black/10 transition-colors"
-                >
-                  <div className="w-16 h-16 rounded-lg bg-white flex items-center justify-center text-3xl border border-black/10">
-                    {item.image}
+              {order.items.map((item, index) => (
+                <div key={index} className="bg-black/5 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-black">{item.name}</p>
+                    <p className="text-sm text-black/50">Quantity: {item.quantity}</p>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-black">
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-black/50 mt-1">
-                      Quantity: {item.quantity}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-black">
-                      $
-                      {(
-                        (order.total / order.items.length) *
-                        item.quantity
-                      ).toFixed(2)}
-                    </p>
-                  </div>
+                  <p className="font-bold text-black">${(item.price * item.quantity).toFixed(2)}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <OrderTimeline order={order} />
-
           {/* Order Summary */}
-          <div className="p-4 bg-black/5 rounded-xl space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-black/60">Subtotal</span>
-              <span className="font-medium text-black">
-                ${(order.total * 0.9).toFixed(2)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-black/60">Shipping</span>
-              <span className="font-medium text-black">
-                ${(order.total * 0.05).toFixed(2)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-black/60">Tax</span>
-              <span className="font-medium text-black">
-                ${(order.total * 0.05).toFixed(2)}
-              </span>
-            </div>
-            <div className="pt-2 border-t border-black/10 flex items-center justify-between">
-              <span className="font-semibold text-black">Total</span>
-              <span className="text-xl font-bold text-black">
-                ${order.total.toFixed(2)}
-              </span>
+          <div>
+            <h3 className="text-lg font-bold text-black mb-4">Order Summary</h3>
+            <div className="bg-black/5 rounded-xl p-4 space-y-2">
+              {order.subtotal && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-black/60">Subtotal</span>
+                  <span className="text-sm font-medium text-black">${order.subtotal.toFixed(2)}</span>
+                </div>
+              )}
+              {order.shipping && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-black/60">Shipping</span>
+                  <span className="text-sm font-medium text-black">${order.shipping.toFixed(2)}</span>
+                </div>
+              )}
+              {order.tax && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-black/60">Tax</span>
+                  <span className="text-sm font-medium text-black">${order.tax.toFixed(2)}</span>
+                </div>
+              )}
+              {order.discount && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-black/60">Discount</span>
+                  <span className="text-sm font-medium text-green-600">-${order.discount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="border-t border-black/10 pt-2 flex justify-between">
+                <span className="font-bold text-black">Total</span>
+                <span className="font-bold text-black">${order.total.toFixed(2)}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Footer Actions */}
-        <div className="p-6 border-t border-black/5 flex items-center gap-3">
-          <button className="flex-1 px-6 py-3 bg-black text-white rounded-xl font-medium hover:bg-black/90 transition-all duration-300 hover:shadow-lg">
-            Update Status
-          </button>
-          <button className="flex-1 px-6 py-3 bg-black/5 text-black rounded-xl font-medium hover:bg-black/10 transition-all duration-300">
-            Print Invoice
-          </button>
+          {/* Status Update */}
+          <div>
+            <h3 className="text-lg font-bold text-black mb-4">Update Status</h3>
+            <div className="flex gap-3">
+              <select
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value)}
+                className="flex-1 px-4 py-3 bg-black/5 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20"
+              >
+                {statuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleStatusUpdate}
+                disabled={isUpdating || newStatus === order.status}
+                className="px-6 py-3 bg-black text-white rounded-xl font-medium hover:bg-black/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUpdating ? 'Updating...' : 'Update Status'}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { gsap } from 'gsap';
 
 const ProductsStats = () => {
   const containerRef = useRef(null);
+  const hasAnimated = useRef(false);
   const [stats, setStats] = useState({
     total: 0,
     categories: 0,
@@ -118,18 +119,37 @@ const ProductsStats = () => {
   ];
 
   useEffect(() => {
-    if (!loading && containerRef.current) {
-      const ctx = gsap.context(() => {
-        gsap.from(containerRef.current.children, {
-          opacity: 0,
-          y: 30,
-          duration: 0.6,
-          stagger: 0.1,
-          ease: 'power2.out',
-        });
-      }, containerRef);
+    if (!loading && containerRef.current && !hasAnimated.current) {
+      hasAnimated.current = true;
 
-      return () => ctx.revert();
+      const cards = Array.from(containerRef.current.children);
+
+      // Set initial state
+      gsap.set(cards, {
+        opacity: 0,
+        y: 30,
+      });
+
+      // Animate in with timeline
+      const tl = gsap.timeline({
+        defaults: {
+          ease: 'power2.out',
+        },
+      });
+
+      tl.to(cards, {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        stagger: {
+          amount: 0.3,
+          from: 'start',
+        },
+      });
+
+      return () => {
+        tl.kill();
+      };
     }
   }, [loading]);
 

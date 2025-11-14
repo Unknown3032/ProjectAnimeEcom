@@ -4,91 +4,44 @@ import { useState, useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import OrderDetailsModal from './OrderDetailsModal';
 
-const OrdersTable = () => {
+const OrdersTable = ({ filters }) => {
   const tableRef = useRef(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState(null);
   const ordersPerPage = 10;
 
-  // Sample orders data
-  const orders = [
-    {
-      id: 'ORD-2024-0156',
-      customer: {
-        name: 'Sakura Tanaka',
-        email: 'sakura@email.com',
-        avatar: '👤'
-      },
-      items: [
-        { name: 'Naruto Figure Set', quantity: 2, image: '🎁' },
-        { name: 'Attack on Titan Poster', quantity: 1, image: '🎁' }
-      ],
-      total: 245.99,
-      status: 'delivered',
-      date: '2024-01-15',
-      paymentMethod: 'Credit Card'
-    },
-    {
-      id: 'ORD-2024-0155',
-      customer: {
-        name: 'Yuki Nakamura',
-        email: 'yuki@email.com',
-        avatar: '👤'
-      },
-      items: [
-        { name: 'Demon Slayer Keychain', quantity: 3, image: '🎁' }
-      ],
-      total: 89.97,
-      status: 'shipped',
-      date: '2024-01-15',
-      paymentMethod: 'PayPal'
-    },
-    {
-      id: 'ORD-2024-0154',
-      customer: {
-        name: 'Hiro Yamamoto',
-        email: 'hiro@email.com',
-        avatar: '👤'
-      },
-      items: [
-        { name: 'One Piece Mug', quantity: 1, image: '🎁' }
-      ],
-      total: 34.99,
-      status: 'processing',
-      date: '2024-01-14',
-      paymentMethod: 'Credit Card'
-    },
-    {
-      id: 'ORD-2024-0153',
-      customer: {
-        name: 'Aiko Sato',
-        email: 'aiko@email.com',
-        avatar: '👤'
-      },
-      items: [
-        { name: 'My Hero Academia T-Shirt', quantity: 2, image: '🎁' }
-      ],
-      total: 59.98,
-      status: 'pending',
-      date: '2024-01-14',
-      paymentMethod: 'Debit Card'
-    },
-    {
-      id: 'ORD-2024-0152',
-      customer: {
-        name: 'Kenji Takahashi',
-        email: 'kenji@email.com',
-        avatar: '👤'
-      },
-      items: [
-        { name: 'Dragon Ball Z Figure', quantity: 1, image: '🎁' }
-      ],
-      total: 129.99,
-      status: 'cancelled',
-      date: '2024-01-13',
-      paymentMethod: 'Credit Card'
-    },
-  ];
+  useEffect(() => {
+    fetchOrders();
+  }, [currentPage, filters]);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      
+      const params = new URLSearchParams({
+        page: currentPage,
+        limit: ordersPerPage,
+        ...(filters?.status && { status: filters.status }),
+        ...(filters?.search && { search: filters.search }),
+        ...(filters?.dateRange && { dateRange: filters.dateRange })
+      });
+
+      const response = await fetch(`/api/admin/orders?${params}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setOrders(data.orders);
+        setPagination(data.pagination);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusColor = (status) => {
     const colors = {
@@ -101,25 +54,50 @@ const OrdersTable = () => {
     return colors[status] || 'bg-black/5 text-black/40';
   };
 
-  useEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.from(tableRef.current.querySelectorAll('.order-row'), {
-        opacity: 0,
-        y: 20,
-        duration: 0.5,
-        stagger: 0.05,
-        ease: 'power2.out',
-        delay: 0.4,
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
       });
-    }, tableRef);
 
-    return () => ctx.revert();
-  }, [currentPage]);
+      const data = await response.json();
 
-  const totalPages = Math.ceil(orders.length / ordersPerPage);
-  const indexOfLastOrder = currentPage * ordersPerPage;
-  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = orders.slice(indexOfFirstOrder, indexOfLastOrder);
+      if (data.success) {
+        // Refresh orders
+        fetchOrders();
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (!loading && orders.length > 0) {
+      const ctx = gsap.context(() => {
+        gsap.from(tableRef.current.querySelectorAll('.order-row'), {
+          opacity: 0,
+          y: 20,
+          duration: 0.5,
+          stagger: 0.05,
+          ease: 'power2.out',
+        });
+      }, tableRef);
+
+      return () => ctx.revert();
+    }
+  }, [loading, orders]);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-lg border border-black/5 p-12">
+        <div className="flex items-center justify-center">
+          <div className="w-12 h-12 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -127,6 +105,9 @@ const OrdersTable = () => {
         {/* Table Header */}
         <div className="p-6 border-b border-black/5">
           <h2 className="text-xl font-bold text-black">Recent Orders</h2>
+          <p className="text-sm text-black/50 mt-1">
+            {pagination?.totalOrders || 0} total orders found
+          </p>
         </div>
 
         {/* Desktop Table */}
@@ -158,38 +139,34 @@ const OrdersTable = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5">
-              {currentOrders.map((order) => (
+              {orders.map((order) => (
                 <tr
-                  key={order.id}
+                  key={order._id}
                   className="order-row hover:bg-black/5 transition-colors duration-200 cursor-pointer"
                   onClick={() => setSelectedOrder(order)}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-medium text-black">{order.id}</span>
+                    <span className="text-sm font-medium text-black">
+                      {order.orderNumber}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center text-xl">
-                        {order.customer.avatar}
+                        👤
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-black">{order.customer.name}</p>
-                        <p className="text-xs text-black/50">{order.customer.email}</p>
+                        <p className="text-sm font-medium text-black">
+                          {order.shippingAddress?.firstName} {order.shippingAddress?.lastName}
+                        </p>
+                        <p className="text-xs text-black/50">
+                          {order.user?.email}
+                        </p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        {order.items.slice(0, 3).map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center border-2 border-white"
-                          >
-                            <span className="text-sm">{item.image}</span>
-                          </div>
-                        ))}
-                      </div>
                       <span className="text-sm text-black/60">
                         {order.items.length} item{order.items.length > 1 ? 's' : ''}
                       </span>
@@ -206,7 +183,7 @@ const OrdersTable = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-black/60">
-                    {new Date(order.date).toLocaleDateString('en-US', {
+                    {new Date(order.createdAt).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       year: 'numeric'
@@ -231,16 +208,20 @@ const OrdersTable = () => {
 
         {/* Mobile Cards */}
         <div className="lg:hidden divide-y divide-black/5">
-          {currentOrders.map((order) => (
+          {orders.map((order) => (
             <div
-              key={order.id}
+              key={order._id}
               onClick={() => setSelectedOrder(order)}
               className="p-4 hover:bg-black/5 transition-colors duration-200 cursor-pointer"
             >
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <p className="text-sm font-semibold text-black mb-1">{order.id}</p>
-                  <p className="text-xs text-black/50">{order.customer.name}</p>
+                  <p className="text-sm font-semibold text-black mb-1">
+                    {order.orderNumber}
+                  </p>
+                  <p className="text-xs text-black/50">
+                    {order.shippingAddress?.firstName} {order.shippingAddress?.lastName}
+                  </p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                   {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
@@ -248,26 +229,14 @@ const OrdersTable = () => {
               </div>
               
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    {order.items.slice(0, 3).map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center border-2 border-white"
-                      >
-                        <span className="text-sm">{item.image}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <span className="text-xs text-black/60">
-                    {order.items.length} item{order.items.length > 1 ? 's' : ''}
-                  </span>
-                </div>
+                <span className="text-xs text-black/60">
+                  {order.items.length} item{order.items.length > 1 ? 's' : ''}
+                </span>
                 
                 <div className="text-right">
                   <p className="text-sm font-bold text-black">${order.total.toFixed(2)}</p>
                   <p className="text-xs text-black/50">
-                    {new Date(order.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </p>
                 </div>
               </div>
@@ -276,45 +245,47 @@ const OrdersTable = () => {
         </div>
 
         {/* Pagination */}
-        <div className="px-6 py-4 border-t border-black/5 flex items-center justify-between">
-          <p className="text-sm text-black/60">
-            Showing {indexOfFirstOrder + 1} to {Math.min(indexOfLastOrder, orders.length)} of {orders.length} orders
-          </p>
-          
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 rounded-lg border border-black/10 text-sm font-medium text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5 transition-colors"
-            >
-              Previous
-            </button>
+        {pagination && (
+          <div className="px-6 py-4 border-t border-black/5 flex items-center justify-between">
+            <p className="text-sm text-black/60">
+              Showing {((currentPage - 1) * ordersPerPage) + 1} to {Math.min(currentPage * ordersPerPage, pagination.totalOrders)} of {pagination.totalOrders} orders
+            </p>
             
-            <div className="flex items-center gap-1">
-              {[...Array(totalPages)].map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentPage(idx + 1)}
-                  className={`w-10 h-10 rounded-lg text-sm font-medium transition-all ${
-                    currentPage === idx + 1
-                      ? 'bg-black text-white'
-                      : 'text-black hover:bg-black/5'
-                  }`}
-                >
-                  {idx + 1}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 rounded-lg border border-black/10 text-sm font-medium text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5 transition-colors"
+              >
+                Previous
+              </button>
+              
+              <div className="flex items-center gap-1">
+                {[...Array(pagination.totalPages)].map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentPage(idx + 1)}
+                    className={`w-10 h-10 rounded-lg text-sm font-medium transition-all ${
+                      currentPage === idx + 1
+                        ? 'bg-black text-white'
+                        : 'text-black hover:bg-black/5'
+                    }`}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+              </div>
+              
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.totalPages))}
+                disabled={currentPage === pagination.totalPages}
+                className="px-4 py-2 rounded-lg border border-black/10 text-sm font-medium text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5 transition-colors"
+              >
+                Next
+              </button>
             </div>
-            
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 rounded-lg border border-black/10 text-sm font-medium text-black disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/5 transition-colors"
-            >
-              Next
-            </button>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Order Details Modal */}
@@ -322,6 +293,7 @@ const OrdersTable = () => {
         <OrderDetailsModal
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
+          onStatusUpdate={handleStatusUpdate}
         />
       )}
     </>

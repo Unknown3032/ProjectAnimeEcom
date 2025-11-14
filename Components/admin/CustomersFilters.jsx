@@ -10,6 +10,18 @@ const CustomersFilters = ({ onFilterChange }) => {
   const [dateRange, setDateRange] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
 
+  // Notify parent of filter changes
+  useEffect(() => {
+    if (onFilterChange) {
+      onFilterChange({
+        segment: activeSegment,
+        search: searchQuery,
+        dateRange: dateRange,
+        sortBy: sortBy
+      });
+    }
+  }, [activeSegment, searchQuery, dateRange, sortBy]);
+
   const segments = [
     { value: 'all', label: 'All Customers', count: '2,847' },
     { value: 'active', label: 'Active', count: '1,892' },
