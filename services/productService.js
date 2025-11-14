@@ -3,7 +3,7 @@ import axios from "axios";
 // Product-specific Axios Instance
 const productAxios = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000",
-  timeout: 30000, // 30 seconds for file uploads
+  timeout: 30000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -13,13 +13,11 @@ const productAxios = axios.create({
 // Request interceptor
 productAxios.interceptors.request.use(
   (config) => {
-    // Add auth token if exists
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Add user ID header if exists
     const user = localStorage.getItem("user");
     if (user) {
       try {
@@ -61,16 +59,6 @@ productAxios.interceptors.response.use(
       }
     }
 
-    // Handle 403 Forbidden
-    if (error.response?.status === 403) {
-      console.error("Permission denied");
-    }
-
-    // Handle 500 Server Error
-    if (error.response?.status === 500) {
-      console.error("Server error occurred");
-    }
-
     return Promise.reject(error);
   }
 );
@@ -82,12 +70,17 @@ class ProductService {
   async addProduct(productData) {
     try {
       const transformedData = this.transformProductData(productData);
+      
+      console.log('Sending product data:', transformedData); // Debug log
+      
       const response = await productAxios.post(
         "/api/products/add",
         transformedData
       );
+      
       return response.data;
     } catch (error) {
+      console.error('Add product service error:', error);
       throw this.handleError(error);
     }
   }
@@ -174,78 +167,74 @@ class ProductService {
    * Transform form data to API format
    */
   transformProductData(formData) {
+    // Ensure anime object has required fields
+    const animeData = formData.anime || {};
+    
     return {
-      // Basic info
       name: formData.name?.trim(),
       description: formData.description?.trim(),
       shortDescription:
         formData.shortDescription?.trim() ||
         formData.description?.substring(0, 200),
 
-      // Anime info
       anime: {
-        name: formData.anime?.name?.trim() || "",
-        character: formData.anime?.character?.trim() || "",
-        series: formData.anime?.series?.trim() || "",
-        season: formData.anime?.season?.trim() || "",
-        episode: formData.anime?.episode?.trim() || "",
+        name: animeData.name?.trim() || formData.animeName?.trim() || "",
+        character: animeData.character?.trim() || "",
+        series: animeData.series?.trim() || "",
+        season: animeData.season?.trim() || "",
+        episode: animeData.episode?.trim() || "",
       },
 
-      // Category
       category: formData.category,
-      subCategory: formData.subcategory || "",
+      subCategory: formData.subcategory || formData.subCategory || "",
       tags: Array.isArray(formData.tags) ? formData.tags : [],
 
-      // Pricing
       price: parseFloat(formData.price) || 0,
       originalPrice: formData.compareAtPrice
         ? parseFloat(formData.compareAtPrice)
+        : formData.originalPrice 
+        ? parseFloat(formData.originalPrice)
         : null,
       currency: "USD",
 
-      // Inventory
-      stock: parseInt(formData.quantity) || 0,
+      stock: parseInt(formData.quantity || formData.stock) || 0,
       sku: formData.sku?.trim(),
 
-      // Images
       images: Array.isArray(formData.images)
         ? formData.images
             .filter((img) =>
-              typeof img === "string" ? img.trim() !== "" : img.url
+              typeof img === "string" ? img.trim() !== "" : img?.url
             )
             .map((img) =>
-              typeof img === "string" ? { url: img, alt: formData.name } : img
+              typeof img === "string" 
+                ? { url: img, alt: formData.name } 
+                : { url: img.url, alt: img.alt || formData.name, isPrimary: img.isPrimary || false }
             )
         : [],
 
-      // Brand
       brand: formData.brand?.trim(),
       manufacturer: formData.manufacturer?.trim() || formData.brand?.trim(),
       isOfficial: Boolean(formData.isOfficial),
       licensedBy: formData.licensedBy?.trim() || "",
 
-      // Availability
-      isAvailable: formData.status === "active",
-      isFeatured: Boolean(formData.featured),
+      isAvailable: formData.status === "active" || formData.isAvailable !== false,
+      isFeatured: Boolean(formData.featured || formData.isFeatured),
       isNewArrival: Boolean(formData.isNewArrival),
       isBestseller: Boolean(formData.isBestseller),
 
-      // Shipping
       shipping: {
-        weight: parseFloat(formData.weight) || 0.5,
+        weight: parseFloat(formData.weight || formData.shipping?.weight) || 0.5,
         dimensions: {
-          length: parseFloat(formData.length) || 0,
-          width: parseFloat(formData.width) || 0,
-          height: parseFloat(formData.height) || 0,
+          length: parseFloat(formData.length || formData.shipping?.dimensions?.length) || 0,
+          width: parseFloat(formData.width || formData.shipping?.dimensions?.width) || 0,
+          height: parseFloat(formData.height || formData.shipping?.dimensions?.height) || 0,
         },
-        freeShipping: Boolean(formData.freeShipping),
-        estimatedDelivery: formData.estimatedDelivery || "5-7 business days",
+        freeShipping: Boolean(formData.freeShipping || formData.shipping?.freeShipping),
+        estimatedDelivery: formData.estimatedDelivery || formData.shipping?.estimatedDelivery || "5-7 business days",
       },
 
-      // Status
-      status: formData.status === "active" ? "published" : "draft",
+      status: formData.status === "active" ? "published" : (formData.status || "draft"),
 
-      // Age rating
       ageRating: formData.ageRating || "All Ages",
     };
   }
@@ -254,18 +243,26 @@ class ProductService {
    * Handle API errors
    */
   handleError(error) {
+    console.error('Service error:', error);
+    
     if (error.response) {
+      // Server responded with error
+      const errorData = error.response.data;
+      
       return {
-        error: error.response.data?.error || "Server error occurred",
+        error: errorData?.error || errorData?.message || "Server error occurred",
         status: error.response.status,
-        details: error.response.data,
+        details: errorData?.details || errorData,
+        validationErrors: errorData?.details?.validationErrors || null
       };
     } else if (error.request) {
+      // Request made but no response
       return {
         error: "No response from server. Please check your connection.",
         status: 0,
       };
     } else {
+      // Error setting up request
       return {
         error: error.message || "An unexpected error occurred",
         status: 0,

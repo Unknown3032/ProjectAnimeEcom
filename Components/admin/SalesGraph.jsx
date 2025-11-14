@@ -3,53 +3,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { gsap } from 'gsap';
+import { adminAPI } from '@/lib/api/adminApi';
 
-const SalesGraph = () => {
+const SalesGraph = ({ initialData }) => {
   const containerRef = useRef(null);
   const titleRef = useRef(null);
   const statsRef = useRef(null);
   const [activeView, setActiveView] = useState('area');
   const [activePeriod, setActivePeriod] = useState('30d');
-  
-  // Sales data for different periods
-  const salesData = {
-    '7d': [
-      { date: 'Mon', sales: 4200, orders: 28 },
-      { date: 'Tue', sales: 3800, orders: 24 },
-      { date: 'Wed', sales: 5100, orders: 34 },
-      { date: 'Thu', sales: 6200, orders: 41 },
-      { date: 'Fri', sales: 7800, orders: 52 },
-      { date: 'Sat', sales: 9200, orders: 61 },
-      { date: 'Sun', sales: 8500, orders: 56 },
-    ],
-    '30d': [
-      { date: 'Week 1', sales: 18500, orders: 124 },
-      { date: 'Week 2', sales: 22300, orders: 148 },
-      { date: 'Week 3', sales: 19800, orders: 132 },
-      { date: 'Week 4', sales: 25600, orders: 171 },
-    ],
-    '90d': [
-      { date: 'Jan', sales: 45000, orders: 302 },
-      { date: 'Feb', sales: 52000, orders: 348 },
-      { date: 'Mar', sales: 48500, orders: 324 },
-    ],
-    '1y': [
-      { date: 'Q1', sales: 145000, orders: 974 },
-      { date: 'Q2', sales: 168000, orders: 1126 },
-      { date: 'Q3', sales: 152000, orders: 1018 },
-      { date: 'Q4', sales: 189000, orders: 1267 },
-    ],
-  };
+  const [salesData, setSalesData] = useState(initialData || []);
+  const [loading, setLoading] = useState(false);
 
-  const currentData = salesData[activePeriod];
+  useEffect(() => {
+    if (initialData) {
+      setSalesData(initialData);
+    }
+  }, [initialData]);
 
-  // Calculate statistics
-  const totalSales = currentData.reduce((acc, item) => acc + item.sales, 0);
-  const totalOrders = currentData.reduce((acc, item) => acc + item.orders, 0);
-  const avgOrderValue = (totalSales / totalOrders).toFixed(2);
-  const growth = ((currentData[currentData.length - 1].sales - currentData[0].sales) / currentData[0].sales * 100).toFixed(1);
-
-  // GSAP Animations
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.from(titleRef.current, {
@@ -78,9 +48,30 @@ const SalesGraph = () => {
     }, containerRef);
 
     return () => ctx.revert();
-  }, [activePeriod]);
+  }, [salesData]);
 
-  // Custom Tooltip
+  const handlePeriodChange = async (period) => {
+    setActivePeriod(period);
+    setLoading(true);
+    
+    try {
+      const response = await adminAPI.getSalesData(period);
+      setSalesData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch sales data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate statistics
+  const totalSales = salesData.reduce((acc, item) => acc + item.sales, 0);
+  const totalOrders = salesData.reduce((acc, item) => acc + item.orders, 0);
+  const avgOrderValue = totalOrders > 0 ? (totalSales / totalOrders).toFixed(2) : 0;
+  const growth = salesData.length > 1 
+    ? ((salesData[salesData.length - 1].sales - salesData[0].sales) / salesData[0].sales * 100).toFixed(1)
+    : 0;
+
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (
@@ -93,6 +84,11 @@ const SalesGraph = () => {
             <p className="text-white/90 text-xs">
               Orders: <span className="font-semibold">{payload[0].payload.orders}</span>
             </p>
+            {payload[0].payload.avgOrderValue && (
+              <p className="text-white/90 text-xs">
+                Avg: <span className="font-semibold">${payload[0].payload.avgOrderValue.toLocaleString()}</span>
+              </p>
+            )}
           </div>
         </div>
       );
@@ -123,8 +119,9 @@ const SalesGraph = () => {
             {periods.map((period) => (
               <button
                 key={period.value}
-                onClick={() => setActivePeriod(period.value)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-300 ${
+                onClick={() => handlePeriodChange(period.value)}
+                disabled={loading}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-300 disabled:opacity-50 ${
                   activePeriod === period.value
                     ? 'bg-black text-white shadow-md'
                     : 'text-black/60 hover:text-black'
@@ -184,7 +181,7 @@ const SalesGraph = () => {
         <div className="bg-gradient-to-br from-black/5 to-black/10 rounded-xl p-3 md:p-4 hover:shadow-md transition-all duration-300 group">
           <p className="text-xs text-black/50 mb-1">Growth Rate</p>
           <p className={`text-lg md:text-xl lg:text-2xl font-bold group-hover:scale-105 transition-transform ${
-            growth >= 0 ? 'text-black' : 'text-black/50'
+            growth >= 0 ? 'text-green-600' : 'text-red-600'
           }`}>
             {growth >= 0 ? '+' : ''}{growth}%
           </p>
@@ -192,72 +189,82 @@ const SalesGraph = () => {
       </div>
 
       {/* Graph */}
-      <div className="w-full h-[250px] md:h-[350px] lg:h-[400px]">
-        <ResponsiveContainer width="100%" height="100%">
-          {activeView === 'area' ? (
-            <AreaChart data={currentData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#000000" stopOpacity={0.15}/>
-                  <stop offset="95%" stopColor="#000000" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#000000" strokeOpacity={0.05} />
-              <XAxis 
-                dataKey="date" 
-                stroke="#000000"
-                strokeOpacity={0.3}
-                tick={{ fill: '#000000', opacity: 0.5, fontSize: 11 }}
-                tickLine={false}
-              />
-              <YAxis 
-                stroke="#000000"
-                strokeOpacity={0.3}
-                tick={{ fill: '#000000', opacity: 0.5, fontSize: 11 }}
-                tickLine={false}
-                tickFormatter={(value) => `$${value >= 1000 ? (value / 1000).toFixed(0) + 'k' : value}`}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#000000', strokeOpacity: 0.1 }} />
-              <Area 
-                type="monotone" 
-                dataKey="sales" 
-                stroke="#000000" 
-                strokeWidth={2}
-                fill="url(#salesGradient)"
-                animationDuration={1000}
-              />
-            </AreaChart>
-          ) : (
-            <LineChart data={currentData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#000000" strokeOpacity={0.05} />
-              <XAxis 
-                dataKey="date" 
-                stroke="#000000"
-                strokeOpacity={0.3}
-                tick={{ fill: '#000000', opacity: 0.5, fontSize: 11 }}
-                tickLine={false}
-              />
-              <YAxis 
-                stroke="#000000"
-                strokeOpacity={0.3}
-                tick={{ fill: '#000000', opacity: 0.5, fontSize: 11 }}
-                tickLine={false}
-                tickFormatter={(value) => `$${value >= 1000 ? (value / 1000).toFixed(0) + 'k' : value}`}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#000000', strokeOpacity: 0.1 }} />
-              <Line 
-                type="monotone" 
-                dataKey="sales" 
-                stroke="#000000" 
-                strokeWidth={2.5}
-                dot={{ fill: '#000000', r: 4, strokeWidth: 2, stroke: '#fff' }}
-                activeDot={{ r: 6, fill: '#000000', strokeWidth: 2, stroke: '#fff' }}
-                animationDuration={1000}
-              />
-            </LineChart>
-          )}
-        </ResponsiveContainer>
-      </div>
+      {loading ? (
+        <div className="w-full h-[250px] md:h-[350px] lg:h-[400px] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+        </div>
+      ) : salesData.length === 0 ? (
+        <div className="w-full h-[250px] md:h-[350px] lg:h-[400px] flex items-center justify-center">
+          <p className="text-black/40">No sales data available</p>
+        </div>
+      ) : (
+        <div className="w-full h-[250px] md:h-[350px] lg:h-[400px]">
+          <ResponsiveContainer width="100%" height="100%">
+            {activeView === 'area' ? (
+              <AreaChart data={salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#000000" stopOpacity={0.15}/>
+                    <stop offset="95%" stopColor="#000000" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#000000" strokeOpacity={0.05} />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#000000"
+                  strokeOpacity={0.3}
+                  tick={{ fill: '#000000', opacity: 0.5, fontSize: 11 }}
+                  tickLine={false}
+                />
+                <YAxis 
+                  stroke="#000000"
+                  strokeOpacity={0.3}
+                  tick={{ fill: '#000000', opacity: 0.5, fontSize: 11 }}
+                  tickLine={false}
+                  tickFormatter={(value) => `$${value >= 1000 ? (value / 1000).toFixed(0) + 'k' : value}`}
+                />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#000000', strokeOpacity: 0.1 }} />
+                <Area 
+                  type="monotone" 
+                  dataKey="sales" 
+                  stroke="#000000" 
+                  strokeWidth={2}
+                  fill="url(#salesGradient)"
+                  animationDuration={1000}
+                />
+              </AreaChart>
+            ) : (
+              <LineChart data={salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#000000" strokeOpacity={0.05} />
+                <XAxis 
+                  dataKey="date" 
+                  stroke="#000000"
+                  strokeOpacity={0.3}
+                  tick={{ fill: '#000000', opacity: 0.5, fontSize: 11 }}
+                  tickLine={false}
+                />
+                <YAxis 
+                  stroke="#000000"
+                  strokeOpacity={0.3}
+                  tick={{ fill: '#000000', opacity: 0.5, fontSize: 11 }}
+                  tickLine={false}
+                  tickFormatter={(value) => `$${value >= 1000 ? (value / 1000).toFixed(0) + 'k' : value}`}
+                />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#000000', strokeOpacity: 0.1 }} />
+                <Line 
+                  type="monotone" 
+                  dataKey="sales" 
+                  stroke="#000000" 
+                  strokeWidth={2.5}
+                  dot={{ fill: '#000000', r: 4, strokeWidth: 2, stroke: '#fff' }}
+                  activeDot={{ r: 6, fill: '#000000', strokeWidth: 2, stroke: '#fff' }}
+                  animationDuration={1000}
+                />
+              </LineChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Bottom Info */}
       <div className="mt-6 pt-6 border-t border-black/5">

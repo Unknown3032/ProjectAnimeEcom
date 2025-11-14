@@ -491,145 +491,202 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleSubmit = async (status) => {
-    // Validate all steps before submitting
-    for (let i = 1; i <= 4; i++) {
-      if (!validateStep(i)) {
-        setCurrentStep(i);
-        toast.error(`Please complete step ${i} correctly`);
-        return;
-      }
+ const handleSubmit = async (status) => {
+  // Validate all steps before submitting
+  for (let i = 1; i <= 4; i++) {
+    if (!validateStep(i)) {
+      setCurrentStep(i);
+      toast.error(`Please complete step ${i} correctly`);
+      return;
     }
+  }
 
-    setSaving(true);
-    const loadingToast = toast.loading(isEdit ? 'Updating product...' : 'Creating product...');
+  setSaving(true);
+  const loadingToast = toast.loading(isEdit ? 'Updating product...' : 'Creating product...');
 
-    try {
-      const processedImages = formData.images.map((img, index) => {
-        const imageUrl = typeof img === 'string' ? img : (img.url || img.preview || '');
-        return {
-          url: imageUrl,
-          alt: img.alt || formData.name || 'Product image',
-          isPrimary: index === 0
-        };
-      }).filter(img => img.url.trim() !== '');
-
-      if (processedImages.length === 0) {
-        toast.dismiss(loadingToast);
-        toast.error("Please add at least one product image");
-        setCurrentStep(4);
-        setSaving(false);
-        return;
-      }
-
-      const submissionData = {
-        name: formData.name.trim(),
-        slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-        description: formData.description.trim(),
-        shortDescription: formData.shortDescription?.trim() || '',
-        
-        anime: {
-          name: formData.anime.name.trim(),
-          series: formData.anime.series?.trim() || '',
-          character: formData.anime.character?.trim() || '',
-          season: formData.anime.season?.trim() || '',
-          episode: formData.anime.episode?.trim() || '',
-        },
-        
-        category: formData.category,
-        subCategory: formData.subCategory || '',
-        tags: formData.tags || [],
-        
-        price: parseFloat(formData.price),
-        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
-        discount: 0,
-        currency: formData.currency || 'USD',
-        
-        stock: formData.trackQuantity ? parseInt(formData.stock) : 0,
-        sku: formData.sku,
-        variants: [],
-        
-        images: processedImages,
-        
-        specifications: {
-          material: formData.specifications?.material || '',
-          weight: formData.specifications?.weight || '',
-          dimensions: formData.specifications?.dimensions || {
-            length: 0,
-            width: 0,
-            height: 0,
-            unit: 'cm'
-          },
-          careInstructions: formData.specifications?.careInstructions || [],
-          features: formData.specifications?.features || [],
-        },
-        
-        brand: formData.brand.trim(),
-        manufacturer: formData.manufacturer?.trim() || '',
-        isOfficial: formData.isOfficial || false,
-        licensedBy: formData.licensedBy?.trim() || '',
-        
-        isAvailable: status === 'published',
-        isFeatured: formData.isFeatured || false,
-        isNewArrival: formData.isNewArrival || false,
-        isBestseller: formData.isBestseller || false,
-        isPreOrder: formData.isPreOrder || false,
-        preOrderReleaseDate: formData.preOrderReleaseDate || undefined,
-        
-        isLimitedEdition: formData.isLimitedEdition || false,
-        limitedQuantity: formData.limitedQuantity ? parseInt(formData.limitedQuantity) : undefined,
-        
-        shipping: {
-          weight: parseFloat(formData.shipping?.weight || 0),
-          dimensions: {
-            length: parseFloat(formData.shipping?.dimensions?.length || 0),
-            width: parseFloat(formData.shipping?.dimensions?.width || 0),
-            height: parseFloat(formData.shipping?.dimensions?.height || 0),
-          },
-          freeShipping: formData.shipping?.freeShipping || false,
-          estimatedDelivery: formData.shipping?.estimatedDelivery || '',
-        },
-        
-        status: status === 'active' ? 'published' : 'draft',
-        ageRating: formData.ageRating || 'All Ages',
+  try {
+    const processedImages = formData.images.map((img, index) => {
+      const imageUrl = typeof img === 'string' ? img : (img.url || img.preview || '');
+      return {
+        url: imageUrl,
+        alt: img.alt || formData.name || 'Product image',
+        isPrimary: index === 0
       };
+    }).filter(img => img.url.trim() !== '');
 
-      console.log('Submitting product data:', submissionData);
+    if (processedImages.length === 0) {
+      toast.dismiss(loadingToast);
+      toast.error("Please add at least one product image");
+      setCurrentStep(4);
+      setSaving(false);
+      return;
+    }
 
-      const response = isEdit
-        ? await fetch(`/api/admin/products/${initialData._id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(submissionData),
-          })
-        : await fetch('/api/admin/products', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(submissionData),
-          });
+    const submissionData = {
+      name: formData.name.trim(),
+      description: formData.description.trim(),
+      shortDescription: formData.shortDescription?.trim() || formData.description.trim().substring(0, 200),
+      
+      anime: {
+        name: formData.anime.name.trim(),
+        series: formData.anime.series?.trim() || '',
+        character: formData.anime.character?.trim() || '',
+        season: formData.anime.season?.trim() || '',
+        episode: formData.anime.episode?.trim() || '',
+      },
+      
+      category: formData.category,
+      subCategory: formData.subCategory || '',
+      tags: formData.tags || [],
+      
+      price: parseFloat(formData.price),
+      originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : null,
+      discount: 0,
+      currency: formData.currency || 'USD',
+      
+      stock: formData.trackQuantity ? parseInt(formData.stock) : 0,
+      sku: formData.sku,
+      variants: [],
+      
+      images: processedImages,
+      videos: [],
+      
+      specifications: {
+        material: formData.specifications?.material || '',
+        weight: formData.specifications?.weight || '',
+        dimensions: formData.specifications?.dimensions || {
+          length: 0,
+          width: 0,
+          height: 0,
+          unit: 'cm'
+        },
+        careInstructions: formData.specifications?.careInstructions || [],
+        features: formData.specifications?.features || [],
+      },
+      
+      brand: formData.brand.trim(),
+      manufacturer: formData.manufacturer?.trim() || formData.brand.trim(),
+      isOfficial: formData.isOfficial || false,
+      licensedBy: formData.licensedBy?.trim() || '',
+      
+      isAvailable: status === 'active',
+      isFeatured: formData.isFeatured || false,
+      isNewArrival: formData.isNewArrival || false,
+      isBestseller: formData.isBestseller || false,
+      isPreOrder: formData.isPreOrder || false,
+      preOrderReleaseDate: formData.preOrderReleaseDate || null,
+      
+      isLimitedEdition: formData.isLimitedEdition || false,
+      limitedQuantity: formData.limitedQuantity ? parseInt(formData.limitedQuantity) : null,
+      
+      shipping: {
+        weight: parseFloat(formData.shipping?.weight || 0.5),
+        dimensions: {
+          length: parseFloat(formData.shipping?.dimensions?.length || 0),
+          width: parseFloat(formData.shipping?.dimensions?.width || 0),
+          height: parseFloat(formData.shipping?.dimensions?.height || 0),
+        },
+        freeShipping: formData.shipping?.freeShipping || false,
+        estimatedDelivery: formData.shipping?.estimatedDelivery || '5-7 business days',
+      },
+      
+      status: status === 'active' ? 'published' : 'draft',
+      ageRating: formData.ageRating || 'All Ages',
+    };
 
-      const data = await response.json();
+    console.log('Submitting product data:', submissionData);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to save product');
+    const url = isEdit
+      ? `/api/admin/products/${initialData._id}`
+      : '/api/products/add';
+
+    const method = isEdit ? 'PATCH' : 'POST';
+
+    const response = await fetch(url, {
+      method: method,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(submissionData),
+    });
+
+    // Log response details for debugging
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+    // Check if response is ok before parsing JSON
+    if (!response.ok) {
+      // Try to parse error response
+      let errorData;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          errorData = await response.json();
+        } catch (jsonError) {
+          console.error('Error parsing error response:', jsonError);
+          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+        }
+      } else {
+        // Response is not JSON
+        const textResponse = await response.text();
+        console.error('Non-JSON error response:', textResponse);
+        throw new Error(`Server error: ${response.status} - ${textResponse || response.statusText}`);
       }
 
-      toast.dismiss(loadingToast);
-      toast.success(data.message || `Product ${isEdit ? 'updated' : 'created'} successfully!`);
+      // Handle validation errors
+      if (errorData.details?.validationErrors) {
+        const validationErrors = errorData.details.validationErrors;
+        const errorMessages = Object.values(validationErrors).join(', ');
+        throw new Error(errorMessages);
+      }
 
-      setTimeout(() => {
-        router.push('/admin/products');
-      }, 1500);
-    } catch (error) {
-      console.error('Error saving product:', error);
-      toast.dismiss(loadingToast);
-      
-      const errorMessage = error.message || 'Failed to save product. Please try again.';
-      toast.error(errorMessage);
-    } finally {
-      setSaving(false);
+      throw new Error(errorData.error || errorData.message || 'Failed to save product');
     }
-  };
+
+    // Parse success response
+    let data;
+    const contentType = response.headers.get('content-type');
+    
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('Error parsing success response:', jsonError);
+        // If we get here, the operation likely succeeded but response parsing failed
+        toast.dismiss(loadingToast);
+        toast.success(`Product ${isEdit ? 'updated' : 'created'} successfully!`);
+        setTimeout(() => {
+          router.push('/admin/products');
+        }, 1500);
+        return;
+      }
+    } else {
+      console.warn('Response is not JSON:', await response.text());
+      throw new Error('Invalid response format from server');
+    }
+
+    toast.dismiss(loadingToast);
+    toast.success(data.message || `Product ${isEdit ? 'updated' : 'created'} successfully!`);
+
+    setTimeout(() => {
+      router.push('/admin/products');
+    }, 1500);
+
+  } catch (error) {
+    console.error('Error saving product:', error);
+    toast.dismiss(loadingToast);
+    
+    const errorMessage = error.message || 'Failed to save product. Please try again.';
+    toast.error(errorMessage);
+    
+    // Scroll to top to show error
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <div className="max-w-7xl mx-auto">
