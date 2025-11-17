@@ -51,7 +51,7 @@ export async function GET(request) {
         email: user?.email || order.shippingAddress?.email || 'N/A',
         product: firstProduct,
         itemCount: order.items?.length || 0,
-        amount: `$${order.total.toFixed(2)}`,
+        amount: `$${order.total?.toFixed(2)}`,
         rawAmount: order.total,
         status: order.status,
         date: new Date(order.createdAt).toLocaleDateString('en-US', {

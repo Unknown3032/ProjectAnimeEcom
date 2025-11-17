@@ -1,209 +1,254 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useState, useEffect } from "react";
-import axiosInstance from "@/lib/axios";
-import toast from "react-hot-toast";
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { addToCart, getCart, updateCartItem, removeCartItem, clearCart } from '@/lib/api/cartApi';
+import authService from '@/services/authService';
 
-const CartContext = createContext({});
-
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) {
-    throw new Error("useCart must be used within CartProvider");
-  }
-  return context;
-};
+const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
-  // Load cart from localStorage on mount
-  useEffect(() => {
-    loadCart();
-  }, []);
-
-  const loadCart = () => {
-    try {
-      const savedCart = localStorage.getItem("cart");
-      if (savedCart) {
-        setCart(JSON.parse(savedCart));
-      }
-    } catch (error) {
-      console.error("Error loading cart:", error);
-    }
+  // Get current user
+  const getCurrentUser = () => {
+    return authService.getCurrentUser();
   };
 
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
-
-  // Sync cart with server (for logged in users)
-  const syncCartWithServer = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
+  // Fetch cart from backend
+  const fetchCart = useCallback(async (showLoading = true) => {
+    const user = getCurrentUser();
+    if (!user?._id) {
+      setCart([]);
+      setInitialized(true);
+      return;
+    }
+    
+    if (showLoading) setLoading(true);
+    
     try {
-      setLoading(true);
-      // Get server cart
-      const response = await axiosInstance.get("/api/user/cart");
-      const serverCart = response.data.data || [];
-
-      // Merge local cart with server cart
-      const mergedCart = mergeCartItems(cart, serverCart);
-
-      // Update server with merged cart
-      for (const item of cart) {
-        if (!serverCart.find((i) => i.product._id === item.product._id)) {
-          await axiosInstance.post("/api/user/cart", {
-            productId: item.product._id,
-            quantity: item.quantity,
-            price: item.price,
-          });
-        }
+      console.log('🔄 Fetching cart for user:', user._id);
+      const response = await getCart(user._id);
+      
+      if (response.success && response.data) {
+        // Transform backend data to match frontend structure
+        const transformedCart = response.data.items.map(item => ({
+          product: {
+            _id: item.productId,
+            name: item.name,
+            image: item.image
+          },
+          price: item.price,
+          quantity: item.quantity,
+          _id: item._id
+        }));
+        
+        console.log('✅ Cart fetched:', transformedCart.length, 'items');
+        setCart(transformedCart);
+      } else {
+        console.log('⚠️ No cart data');
+        setCart([]);
       }
-
-      setCart(mergedCart);
     } catch (error) {
-      console.error("Error syncing cart:", error);
+      console.error('❌ Error fetching cart:', error);
+      setCart([]);
+    } finally {
+      if (showLoading) setLoading(false);
+      setInitialized(true);
+    }
+  }, []);
+
+  // Sync cart with server
+  const syncCartWithServer = useCallback(async () => {
+    await fetchCart(false); // Don't show loading for background sync
+  }, [fetchCart]);
+
+  // Initial load
+  useEffect(() => {
+    const user = getCurrentUser();
+    console.log('🚀 CartContext initialized, user:', user?._id);
+    if (user?._id) {
+      fetchCart();
+    } else {
+      setInitialized(true);
+    }
+  }, [fetchCart]);
+
+  // Listen for auth events
+  useEffect(() => {
+    const handleUserSignedIn = () => {
+      console.log('👤 User signed in, syncing cart...');
+      fetchCart();
+    };
+
+    const handleUserSignedOut = () => {
+      console.log('👋 User signed out, clearing cart...');
+      setCart([]);
+    };
+
+    // Custom event for cart updates from other components
+    const handleCartUpdate = () => {
+      console.log('🔔 Cart update event received');
+      fetchCart(false);
+    };
+
+    window.addEventListener('userSignedIn', handleUserSignedIn);
+    window.addEventListener('userSignedOut', handleUserSignedOut);
+    window.addEventListener('cartUpdated', handleCartUpdate);
+
+    return () => {
+      window.removeEventListener('userSignedIn', handleUserSignedIn);
+      window.removeEventListener('userSignedOut', handleUserSignedOut);
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
+  }, [fetchCart]);
+
+  // Add to cart
+  const addToCartHandler = async (product, quantity = 1) => {
+    const user = getCurrentUser();
+    
+    if (!user?._id) {
+      alert('Please sign in to add items to cart');
+      return { success: false };
+    }
+
+    setLoading(true);
+    try {
+      console.log('➕ Adding to cart:', product.name);
+      const response = await addToCart(user._id, {
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+        quantity,
+        image: product.image
+      });
+
+      if (response.success) {
+        console.log('✅ Item added to cart');
+        // Immediately fetch updated cart
+        await fetchCart(false);
+        // Dispatch event for other components
+        window.dispatchEvent(new Event('cartUpdated'));
+        return { success: true };
+      } else {
+        throw new Error(response.message);
+      }
+    } catch (error) {
+      console.error('❌ Error adding to cart:', error);
+      alert(error.message || 'Failed to add item to cart');
+      return { success: false };
     } finally {
       setLoading(false);
     }
   };
 
-  const mergeCartItems = (localCart, serverCart) => {
-    const merged = [...serverCart];
+  // Update quantity
+  const updateQuantity = async (productId, newQuantity) => {
+    const user = getCurrentUser();
+    if (!user?._id) return;
 
-    localCart.forEach((localItem) => {
-      const existingIndex = merged.findIndex(
-        (item) => item.product._id === localItem.product._id
-      );
+    if (newQuantity < 1) {
+      await removeFromCart(productId);
+      return;
+    }
 
-      if (existingIndex >= 0) {
-        // Update quantity if item exists
-        merged[existingIndex].quantity += localItem.quantity;
-      } else {
-        // Add new item
-        merged.push(localItem);
-      }
-    });
+    // Find the cart item _id
+    const cartItem = cart.find(item => item.product._id === productId);
+    if (!cartItem) return;
 
-    return merged;
-  };
+    // Optimistic update
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item.product._id === productId
+          ? { ...item, quantity: newQuantity }
+          : item
+      )
+    );
 
-  const addToCart = async (product, quantity = 1) => {
     try {
-      const token = localStorage.getItem("token");
+      console.log('🔢 Updating quantity for:', productId);
+      const response = await updateCartItem(user._id, cartItem._id, newQuantity);
 
-      // Add to local cart
-      const existingIndex = cart.findIndex(
-        (item) => item.product._id === product._id
-      );
-
-      let updatedCart;
-      if (existingIndex >= 0) {
-        updatedCart = [...cart];
-        updatedCart[existingIndex].quantity += quantity;
-      } else {
-        updatedCart = [
-          ...cart,
-          {
-            product,
-            quantity,
-            price: product.price,
-            addedAt: new Date().toISOString(),
-          },
-        ];
+      if (!response.success) {
+        throw new Error(response.message);
       }
-
-      setCart(updatedCart);
-
-      // Sync with server if logged in
-      if (token) {
-        await axiosInstance.post("/api/user/cart", {
-          productId: product._id,
-          quantity,
-          price: product.price,
-        });
-      }
-
-      toast.success("Added to cart");
+      
+      console.log('✅ Quantity updated');
+      // Fetch latest to ensure sync
+      await fetchCart(false);
+      window.dispatchEvent(new Event('cartUpdated'));
     } catch (error) {
-      console.error("Error adding to cart:", error);
-      toast.error("Failed to add to cart");
+      console.error('❌ Error updating quantity:', error);
+      alert('Failed to update quantity');
+      await fetchCart(false);
     }
   };
 
+  // Remove from cart
   const removeFromCart = async (productId) => {
+    const user = getCurrentUser();
+    if (!user?._id) return;
+
+    // Find the cart item _id
+    const cartItem = cart.find(item => item.product._id === productId);
+    if (!cartItem) return;
+
+    // Optimistic update
+    const previousCart = [...cart];
+    setCart(prevCart => prevCart.filter(item => item.product._id !== productId));
+
     try {
-      const token = localStorage.getItem("token");
+      console.log('🗑️ Removing from cart:', productId);
+      const response = await removeCartItem(user._id, cartItem._id);
 
-      // Remove from local cart
-      const updatedCart = cart.filter((item) => item.product._id !== productId);
-      setCart(updatedCart);
-
-      // Sync with server if logged in
-      if (token) {
-        await axiosInstance.delete(`/api/user/cart?productId=${productId}`);
+      if (!response.success) {
+        setCart(previousCart);
+        throw new Error(response.message);
       }
-
-      toast.success("Removed from cart");
+      
+      console.log('✅ Item removed');
+      // Fetch latest to ensure sync
+      await fetchCart(false);
+      window.dispatchEvent(new Event('cartUpdated'));
     } catch (error) {
-      console.error("Error removing from cart:", error);
-      toast.error("Failed to remove from cart");
+      console.error('❌ Error removing from cart:', error);
+      alert('Failed to remove item');
+      setCart(previousCart);
     }
   };
 
-  const updateQuantity = async (productId, quantity) => {
-    try {
-      const token = localStorage.getItem("token");
+  // Clear entire cart
+  const clearCartHandler = async () => {
+    const user = getCurrentUser();
+    
+    // Clear cart locally immediately
+    setCart([]);
+    
+    // If user is logged in, clear on server too
+    if (user?._id) {
+      setLoading(true);
+      try {
+        const response = await clearCart(user._id);
 
-      if (quantity <= 0) {
-        return removeFromCart(productId);
+        if (!response.success) {
+          throw new Error(response.message);
+        }
+        window.dispatchEvent(new Event('cartUpdated'));
+      } catch (error) {
+        console.error('Error clearing cart:', error);
+      } finally {
+        setLoading(false);
       }
-
-      // Update local cart
-      const updatedCart = cart.map((item) =>
-        item.product._id === productId ? { ...item, quantity } : item
-      );
-      setCart(updatedCart);
-
-      // Sync with server if logged in
-      if (token) {
-        await axiosInstance.patch("/api/user/cart", {
-          productId,
-          quantity,
-        });
-      }
-    } catch (error) {
-      console.error("Error updating quantity:", error);
-      toast.error("Failed to update quantity");
     }
   };
 
-  const clearCart = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      setCart([]);
-      localStorage.removeItem("cart");
-
-      // Clear server cart if logged in
-      if (token) {
-        await axiosInstance.delete("/api/user/cart/clear");
-      }
-    } catch (error) {
-      console.error("Error clearing cart:", error);
-    }
-  };
-
+  // Get cart total
   const getCartTotal = () => {
-    return cart.reduce((total, item) => {
-      return total + item.price * item.quantity;
-    }, 0);
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
+  // Get cart count
   const getCartCount = () => {
     return cart.reduce((count, item) => count + item.quantity, 0);
   };
@@ -211,14 +256,24 @@ export function CartProvider({ children }) {
   const value = {
     cart,
     loading,
-    addToCart,
+    initialized,
+    addToCart: addToCartHandler,
     removeFromCart,
     updateQuantity,
-    clearCart,
-    syncCartWithServer,
+    clearCart: clearCartHandler,
     getCartTotal,
     getCartCount,
+    refreshCart: fetchCart,
+    syncCartWithServer,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+}
+
+export function useCart() {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within CartProvider');
+  }
+  return context;
 }

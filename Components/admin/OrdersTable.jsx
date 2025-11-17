@@ -54,22 +54,41 @@ const OrdersTable = ({ filters }) => {
     return colors[status] || 'bg-black/5 text-black/40';
   };
 
-  const handleStatusUpdate = async (orderId, newStatus) => {
+   const handleStatusUpdate = async ({orderId, newStatus, trackingNumber, adminNotes}) => {
+    // setIsUpdating(true);
+    // setError('');
+    // setSuccess('');
+
     try {
-      const response = await fetch(`/api/orders/${orderId}/status`, {
+      // console.log('🔄 Updating order status:', orderId, newStatus);
+
+      const response = await fetch(`/api/admin/orders/${orderId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          trackingNumber: trackingNumber || undefined,
+          adminNotes: adminNotes || undefined,
+        }),
       });
 
       const data = await response.json();
 
       if (data.success) {
-        // Refresh orders
-        fetchOrders();
+        // // Close modal after 1.5 seconds
+        // setTimeout(() => {
+        //   onClose();
+        // }, 1500);
+      } else {
+        throw new Error(data.message || 'Failed to update status');
       }
-    } catch (error) {
-      console.error('Error updating status:', error);
+    } catch (err) {
+      console.error('❌ Error updating status:', err);
+      // setError(err.message || 'Failed to update order status');
+    } finally {
+      // setIsUpdating(false);
     }
   };
 
@@ -174,7 +193,7 @@ const OrdersTable = ({ filters }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm font-semibold text-black">
-                      ${order.total.toFixed(2)}
+                      ${order.total?.toFixed(2)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -234,7 +253,7 @@ const OrdersTable = ({ filters }) => {
                 </span>
                 
                 <div className="text-right">
-                  <p className="text-sm font-bold text-black">${order.total.toFixed(2)}</p>
+                  <p className="text-sm font-bold text-black">${order.total?.toFixed(2)}</p>
                   <p className="text-xs text-black/50">
                     {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </p>

@@ -78,7 +78,7 @@ export default function ProductBanner({ categoryData, productCount }) {
   return (
     <div 
       ref={bannerRef}
-      className="relative h-[65vh] md:h-[75vh] lg:h-[80vh] overflow-hidden bg-white"
+      className="relative h-[65vh] md:h-[75vh] lg:h-[80vh] overflow-hidden bg-black"
     >
       {/* Background Image */}
       <div className="absolute inset-0">

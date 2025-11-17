@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import authService from '@/services/authService';
-import { useCart } from './CartContext';
 
 const AuthContext = createContext({});
 
@@ -17,7 +16,6 @@ export const useAuth = () => {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { syncCartWithServer, clearCart } = useCart();
 
   useEffect(() => {
     // Check if user is logged in
@@ -25,56 +23,56 @@ export function AuthProvider({ children }) {
     setUser(currentUser);
     setLoading(false);
 
-    // Sync cart with server if logged in
-    if (currentUser) {
-      syncCartWithServer();
-    }
-
     // Listen for storage changes (for multi-tab sync)
     const handleStorageChange = () => {
       const updatedUser = authService.getCurrentUser();
       setUser(updatedUser);
-    };
-
-    // Listen for custom auth events
-    const handleAuthChange = (event) => {
-      if (event.detail.type === 'login') {
-        setUser(event.detail.user);
-        syncCartWithServer();
-      } else if (event.detail.type === 'logout') {
-        setUser(null);
-        clearCart();
+      
+      // Dispatch event for cart to listen
+      if (!updatedUser) {
+        window.dispatchEvent(new Event('userSignedOut'));
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('authChange', handleAuthChange);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('authChange', handleAuthChange);
     };
-  }, [syncCartWithServer, clearCart]);
+  }, []);
 
   const login = async (credentials) => {
     const response = await authService.login(credentials);
     setUser(response.data);
     
-    // Sync cart after login
-    await syncCartWithServer();
+    // Dispatch event for cart to sync
+    window.dispatchEvent(new CustomEvent('userSignedIn', { 
+      detail: { user: response.data } 
+    }));
     
     return response;
   };
 
   const signup = async (userData) => {
     const response = await authService.signup(userData);
+    
+    // If signup automatically logs in the user
+    if (response.data) {
+      setUser(response.data);
+      window.dispatchEvent(new CustomEvent('userSignedIn', { 
+        detail: { user: response.data } 
+      }));
+    }
+    
     return response;
   };
 
   const logout = () => {
+    // Dispatch event BEFORE clearing user
+    window.dispatchEvent(new Event('userSignedOut'));
+    
     authService.logout();
     setUser(null);
-    clearCart();
   };
 
   const updateUser = async () => {
@@ -84,6 +82,7 @@ export function AuthProvider({ children }) {
       return response;
     } catch (error) {
       console.error('Error updating user:', error);
+      throw error;
     }
   };
 

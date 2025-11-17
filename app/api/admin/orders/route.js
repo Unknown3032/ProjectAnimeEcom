@@ -1,7 +1,9 @@
+// app/api/admin/orders/route.js
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/connectDb';
 import Order from '@/models/Order';
-import { verifyAdminToken } from '@/lib/serverAuth';
+import User from '@/models/User';
+import Product from '@/models/Product';
 
 // GET - Fetch all orders with filters
 export async function GET(request) {
@@ -28,7 +30,9 @@ export async function GET(request) {
       query.$or = [
         { orderNumber: { $regex: search, $options: 'i' } },
         { 'shippingAddress.firstName': { $regex: search, $options: 'i' } },
-        { 'shippingAddress.lastName': { $regex: search, $options: 'i' } }
+        { 'shippingAddress.lastName': { $regex: search, $options: 'i' } },
+        { 'shippingInfo.firstName': { $regex: search, $options: 'i' } },
+        { 'shippingInfo.lastName': { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -59,20 +63,39 @@ export async function GET(request) {
     // Pagination
     const skip = (page - 1) * limit;
 
-    // Fetch orders
+    // Fetch orders without populate
     const orders = await Order.find(query)
-      .populate('user', 'name email')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
+
+    // Manually populate user for each order
+    const populatedOrders = await Promise.all(
+      orders.map(async (order) => {
+        if (order.userId || order.user) {
+          const userId = order.userId || order.user;
+          try {
+            const user = await User.findById(userId)
+              .select('firstName lastName email name')
+              .lean();
+            if (user) {
+              order.user = user;
+            }
+          } catch (err) {
+            console.log('Could not populate user:', err.message);
+          }
+        }
+        return order;
+      })
+    );
 
     // Get total count
     const totalOrders = await Order.countDocuments(query);
 
     return NextResponse.json({
       success: true,
-      orders,
+      orders: populatedOrders,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(totalOrders / limit),
