@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/mongodb';
 import Order from '@/models/Order';
 import User from '@/models/User';
+import dbConnect from '@/lib/connectDb';
 
 export async function GET(request) {
   try {
@@ -11,7 +11,7 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectDB();
+    await dbConnect();
 
     const adminUser = await User.findById(userId);
     if (!adminUser || adminUser.role !== 'admin') {
