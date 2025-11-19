@@ -11,6 +11,7 @@ export default function TrendingCard({ product, index }) {
   const contentRef = useRef(null);
 
   const handleMouseEnter = () => {
+    
     gsap.to(imageRef.current, {
       scale: 1.05,
       duration: 0.6,
@@ -67,8 +68,8 @@ export default function TrendingCard({ product, index }) {
       <div className="absolute inset-0">
         <img
           ref={imageRef}
-          src={product.image}
-          alt={product.name}
+          src={product?.images[0]?.url}
+          alt={product?.name}
           className="w-full h-full object-cover transition-all duration-700"
         />
       </div>
@@ -122,7 +123,7 @@ export default function TrendingCard({ product, index }) {
         </div>
 
         <button className="w-full cursor-pointer py-3 border border-white text-white font-bold tracking-wider uppercase text-xs md:text-sm hover:bg-white hover:text-black transition-all duration-300">
-          <Link href={`/products/${product?.name}`}>View Product</Link>
+          <Link href={`/products/${product?._id}`}>View Product</Link>
         </button>
       </div>
     </div>

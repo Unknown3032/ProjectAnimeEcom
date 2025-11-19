@@ -45,7 +45,6 @@ export async function POST(request) {
 
     const body = await request.json();
     const { userId, productId, name, price, quantity = 1, image } = body;
-    // console.log(image?.url);
     
 
     // Validation
@@ -75,7 +74,7 @@ export async function POST(request) {
         cart.items[itemIndex].quantity += quantity;
       } else {
         // Add new item
-        cart.items.push({ productId, name, price, quantity, image:image?.url });
+        cart.items.push({ productId, name, price, quantity, image:image});
       }
     }
 

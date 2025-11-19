@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import TrendingCard from './TrendingCard';
-import { trendingProducts } from '@/lib/trendingData';
 import Link from 'next/link';
+import { getTrendingProducts } from '@/lib/api/productsApi';
 
 gsap.registerPlugin(ScrollTrigger);
 
-export default function TrendingProducts() {
+export default function TrendingProducts({ initialProducts = [] }) {
   const sectionRef = useRef(null);
   const headerRef = useRef(null);
   const lineRef = useRef(null);
@@ -19,8 +19,47 @@ export default function TrendingProducts() {
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef(0);
   const scrollStartRef = useRef(0);
+  
+  // State for products
+  const [products, setProducts] = useState(initialProducts);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Fetch products on mount if no initial products
+  useEffect(() => {
+    if (initialProducts.length === 0) {
+      fetchProducts();
+    }
+  }, []);
+
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await getTrendingProducts({
+        limit: 6,
+        page: 1,
+        sortBy: 'trending'
+      });
+
+      if (response.success) {
+        
+        setProducts(response.data.products);
+      } else {
+        setError(response.message);
+      }
+    } catch (err) {
+      setError('Failed to load trending products');
+      console.error('Failed to fetch products:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
+    if (products.length === 0) return;
+
     const ctx = gsap.context(() => {
       // Header entrance
       gsap.fromTo(
@@ -73,14 +112,14 @@ export default function TrendingProducts() {
     });
 
     return () => ctx.revert();
-  }, []);
+  }, [products]);
 
   const updateScrollProgress = () => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const scrollWidth = container.scrollWidth - container.clientWidth;
-    const progress = (container.scrollLeft / scrollWidth) * 100;
+    const progress = scrollWidth > 0 ? (container.scrollLeft / scrollWidth) * 100 : 0;
     setScrollProgress(Math.min(100, Math.max(0, progress)));
   };
 
@@ -96,8 +135,8 @@ export default function TrendingProducts() {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const cardWidth = container.querySelector('.trending-card').offsetWidth;
-    const gap = 32; // 8 * 4 (gap-8)
+    const cardWidth = container.querySelector('.trending-card')?.offsetWidth || 400;
+    const gap = 32;
     const scrollAmount = cardWidth + gap;
     
     const targetScroll = direction === 'left' 
@@ -107,7 +146,6 @@ export default function TrendingProducts() {
     smoothScrollTo(targetScroll);
   };
 
-  // Mouse drag functionality
   const handleMouseDown = (e) => {
     setIsDragging(true);
     dragStartRef.current = e.pageX;
@@ -125,7 +163,9 @@ export default function TrendingProducts() {
 
   const handleMouseUp = () => {
     setIsDragging(false);
-    scrollContainerRef.current.style.cursor = 'grab';
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.cursor = 'grab';
+    }
   };
 
   useEffect(() => {
@@ -136,10 +176,73 @@ export default function TrendingProducts() {
     updateScrollProgress();
 
     return () => container.removeEventListener('scroll', updateScrollProgress);
-  }, []);
+  }, [products]);
 
   const canScrollLeft = scrollProgress > 0;
   const canScrollRight = scrollProgress < 100;
+
+  // Loading state
+  if (isLoading && products.length === 0) {
+    return (
+      <section className="relative py-10 md:py-15 lg:py-20 bg-white">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <div className="flex items-center justify-center h-96">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div>
+              <p className="text-sm text-black/50 tracking-wider uppercase">Loading Trending Products...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <section className="relative py-10 md:py-15 lg:py-20 bg-white">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <div className="text-center py-12">
+            <div className="mb-6">
+              <svg className="w-16 h-16 mx-auto text-black/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-light mb-2">Oops! Something went wrong</h3>
+            <p className="text-black/50 mb-6">{error}</p>
+            <button 
+              onClick={fetchProducts}
+              className="group inline-flex items-center gap-3 px-8 py-3 border border-black hover:bg-black hover:text-white transition-colors duration-300"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span className="text-sm font-medium tracking-wider uppercase">Try Again</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // No products state
+  if (products.length === 0) {
+    return (
+      <section className="relative py-10 md:py-15 lg:py-20 bg-white">
+        <div className="container mx-auto px-4 md:px-6 lg:px-8">
+          <div className="text-center py-12">
+            <div className="mb-6">
+              <svg className="w-16 h-16 mx-auto text-black/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-light mb-2">No Products Yet</h3>
+            <p className="text-black/50">Check back soon for trending products!</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section 
@@ -229,9 +332,9 @@ export default function TrendingProducts() {
           onMouseLeave={handleMouseUp}
         >
           <div className="flex gap-6 lg:gap-8 px-4 md:px-6 lg:px-8 pb-2">
-            {trendingProducts.map((product, index) => (
+            {products.map((product, index) => (
               <div 
-                key={product.id} 
+                key={product._id || product.id} 
                 className="trending-card w-[85vw] sm:w-[70vw] md:w-[55vw] lg:w-[40vw] xl:w-[35vw] flex-shrink-0"
               >
                 <TrendingCard product={product} index={index} />
@@ -296,12 +399,13 @@ export default function TrendingProducts() {
       {/* CTA Section */}
       <div className="container mx-auto px-4 md:px-6 lg:px-8 mt-16 md:mt-20 lg:mt-24">
         <div className="text-center">
-          <button className="group relative cursor-pointer inline-flex items-center gap-4 px-10 lg:px-14 py-4 lg:py-5 border border-black overflow-hidden transition-colors duration-300 hover:text-white">
-            <Link
-            href={`productspage/trending`}
-            className="relative z-10 text-sm font-medium tracking-[0.2em] uppercase">
+          <Link
+            href="/productspage/trending"
+            className="group relative cursor-pointer inline-flex items-center gap-4 px-10 lg:px-14 py-4 lg:py-5 border border-black overflow-hidden transition-colors duration-300 hover:text-white"
+          >
+            <span className="relative z-10 text-sm font-medium tracking-[0.2em] uppercase">
               Explore All Products
-            </Link>
+            </span>
             <svg 
               className="relative z-10 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" 
               fill="none" 
@@ -311,7 +415,7 @@ export default function TrendingProducts() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>
             <div className="absolute inset-0 bg-black transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left" />
-          </button>
+          </Link>
         </div>
       </div>
     </section>
