@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-import HeroBanner from '@/Components/products/HeroBanner';
-import CategoryBanner from '@/Components/products/CategoryBanner';
-import ProductFilters from '@/Components/products/ProductFilters';
-import ProductGrid from '@/Components/products/ProductGrid';
-import { getCategories } from '@/lib/api/categories';
+import HeroBanner from '../../../Components/products/HeroBanner';
+import CategoryBanner from '../../../Components/Products/CategoryBanner'
+import ProductFilters from '../../../Components/products/ProductFilters';
+import ProductGrid from '../../../Components/products/ProductGrid';
+import { getCategories } from '../../../lib/api/categories';
 
 export default function ProductsPage() {
   const [categories, setCategories] = useState([]);
