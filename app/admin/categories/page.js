@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useCategories } from '../../../lib/hooks/useCategories';
 import CategoryForm from '../../../Components/admin/CategoryForm';
-import CategoryList from '../../../components/admin/CategoryList';
+import CategoryList from '../../../Components/admin/CategoryList';
 import { Toaster, toast } from 'react-hot-toast';
 
 export default function AdminCategoriesPage() {

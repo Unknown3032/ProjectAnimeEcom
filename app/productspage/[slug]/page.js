@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-import HeroBanner from '../../../Components/products/HeroBanner';
+import HeroBanner from '../../../Components/Products/HeroBanner';
 import CategoryBanner from '../../../Components/Products/CategoryBanner'
-import ProductFilters from '../../../Components/products/ProductFilters';
-import ProductGrid from '../../../Components/products/ProductGrid';
+import ProductFilters from '../../../Components/Products/ProductFilters';
+import ProductGrid from '../../../Components/Products/ProductGrid';
 import { getCategories } from '../../../lib/api/categories';
 
 export default function ProductsPage() {
