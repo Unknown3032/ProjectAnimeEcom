@@ -2,29 +2,61 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/connectDb';
 import Product from '@/models/Product';
 
-export async function GET(request) {
+export async function GET(request, { params }) {
   try {
     await dbConnect();
 
+    const { slug } = await params;
     const { searchParams } = new URL(request.url);
+
+    // Map category slugs to category enum values
+    const categoryMap = {
+      'clothing': 'Clothing',
+      'accessories': 'Accessories',
+      'figures': 'Figures',
+      'plushies': 'Plushies',
+      'posters': 'Posters',
+      'home-decor': 'Home Decor',
+      'stationery': 'Stationery',
+      'electronics': 'Electronics',
+      'collectibles': 'Collectibles',
+      'manga': 'Manga',
+      'art-books': 'Art Books',
+      'cosplay': 'Cosplay',
+      'keychains': 'Keychains',
+      'bags': 'Bags',
+      'jewelry': 'Jewelry',
+      'other': 'Other',
+    };
+
+    const categoryName = categoryMap[slug.toLowerCase()];
+
+    if (!categoryName) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Category not found' 
+        },
+        { status: 404 }
+      );
+    }
 
     // Query parameters
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = parseInt(searchParams.get('limit')) || 20;
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const order = searchParams.get('order') === 'asc' ? 1 : -1;
-    const search = searchParams.get('search');
-    const category = searchParams.get('category'); // Category string
-    const anime = searchParams.get('anime'); // Anime name
     const minPrice = parseFloat(searchParams.get('minPrice'));
     const maxPrice = parseFloat(searchParams.get('maxPrice'));
     const inStock = searchParams.get('inStock') === 'true';
     const featured = searchParams.get('featured') === 'true';
+    const search = searchParams.get('search');
 
     const skip = (page - 1) * limit;
 
-    // Build query - use status: 'published' and isAvailable instead of isActive
+    // Build query
     const query = {
+      category: categoryName,
       status: 'published',
       isAvailable: true,
     };
@@ -34,16 +66,6 @@ export async function GET(request) {
       query.price = {};
       if (!isNaN(minPrice) && minPrice > 0) query.price.$gte = minPrice;
       if (!isNaN(maxPrice) && maxPrice < Infinity) query.price.$lte = maxPrice;
-    }
-
-    // Category filter (string-based)
-    if (category && category !== 'all') {
-      query.category = category;
-    }
-
-    // Anime filter
-    if (anime) {
-      query['anime.name'] = { $regex: anime, $options: 'i' };
     }
 
     // Stock filter
@@ -62,25 +84,19 @@ export async function GET(request) {
         { name: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
         { 'anime.name': { $regex: search, $options: 'i' } },
-        { 'anime.character': { $regex: search, $options: 'i' } },
       ];
     }
 
-    console.log('📊 Products query:', JSON.stringify(query, null, 2));
-
     // Count total products
     const total = await Product.countDocuments(query);
-    console.log('📦 Total products found:', total);
 
     // Fetch products
     const products = await Product.find(query)
       .sort({ [sortBy]: order })
       .limit(limit)
       .skip(skip)
-      .select('-reviews -__v') // Exclude reviews array to reduce payload
+      .select('-reviews -__v')
       .lean();
-
-    console.log('✅ Products fetched:', products.length);
 
     // Calculate pagination info
     const totalPages = Math.ceil(total / limit);
@@ -90,6 +106,10 @@ export async function GET(request) {
     return NextResponse.json({
       success: true,
       data: products,
+      category: {
+        name: categoryName,
+        slug: slug,
+      },
       pagination: {
         total,
         page,
@@ -101,18 +121,16 @@ export async function GET(request) {
       filters: {
         sortBy,
         order: order === 1 ? 'asc' : 'desc',
-        search,
-        category,
-        anime,
         minPrice: minPrice || 0,
         maxPrice: maxPrice || Infinity,
         inStock,
         featured,
+        search,
       },
     });
 
   } catch (error) {
-    console.error('❌ Get products error:', error);
+    console.error('Get products by category slug error:', error);
     return NextResponse.json(
       { 
         success: false,

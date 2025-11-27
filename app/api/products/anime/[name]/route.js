@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/connectDb';
 import Product from '@/models/Product';
 
-export async function GET(request) {
+export async function GET(request, { params }) {
   try {
     await dbConnect();
 
+    const { name } = await params;
     const { searchParams } = new URL(request.url);
 
     // Query parameters
@@ -13,21 +14,25 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get('limit')) || 20;
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const order = searchParams.get('order') === 'asc' ? 1 : -1;
-    const search = searchParams.get('search');
-    const category = searchParams.get('category'); // Category string
-    const anime = searchParams.get('anime'); // Anime name
     const minPrice = parseFloat(searchParams.get('minPrice'));
     const maxPrice = parseFloat(searchParams.get('maxPrice'));
+    const category = searchParams.get('category');
     const inStock = searchParams.get('inStock') === 'true';
-    const featured = searchParams.get('featured') === 'true';
+    const search = searchParams.get('search');
 
     const skip = (page - 1) * limit;
 
-    // Build query - use status: 'published' and isAvailable instead of isActive
+    // Build query
     const query = {
+      'anime.name': { $regex: name, $options: 'i' },
       status: 'published',
       isAvailable: true,
     };
+
+    // Category filter
+    if (category && category !== 'all') {
+      query.category = category;
+    }
 
     // Price filter
     if (!isNaN(minPrice) || !isNaN(maxPrice)) {
@@ -36,83 +41,55 @@ export async function GET(request) {
       if (!isNaN(maxPrice) && maxPrice < Infinity) query.price.$lte = maxPrice;
     }
 
-    // Category filter (string-based)
-    if (category && category !== 'all') {
-      query.category = category;
-    }
-
-    // Anime filter
-    if (anime) {
-      query['anime.name'] = { $regex: anime, $options: 'i' };
-    }
-
     // Stock filter
     if (inStock) {
       query.stock = { $gt: 0 };
     }
 
-    // Featured filter
-    if (featured) {
-      query.isFeatured = true;
-    }
-
     // Search filter
     if (search && search.trim()) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { 'anime.name': { $regex: search, $options: 'i' } },
-        { 'anime.character': { $regex: search, $options: 'i' } },
+      query.$and = [
+        { 'anime.name': { $regex: name, $options: 'i' } },
+        {
+          $or: [
+            { name: { $regex: search, $options: 'i' } },
+            { description: { $regex: search, $options: 'i' } },
+          ]
+        }
       ];
     }
 
-    console.log('📊 Products query:', JSON.stringify(query, null, 2));
-
     // Count total products
     const total = await Product.countDocuments(query);
-    console.log('📦 Total products found:', total);
 
     // Fetch products
     const products = await Product.find(query)
       .sort({ [sortBy]: order })
       .limit(limit)
       .skip(skip)
-      .select('-reviews -__v') // Exclude reviews array to reduce payload
+      .select('-reviews -__v')
       .lean();
 
-    console.log('✅ Products fetched:', products.length);
-
-    // Calculate pagination info
     const totalPages = Math.ceil(total / limit);
-    const hasNextPage = page < totalPages;
-    const hasPrevPage = page > 1;
 
     return NextResponse.json({
       success: true,
       data: products,
+      anime: {
+        name: name,
+      },
       pagination: {
         total,
         page,
         limit,
         totalPages,
-        hasNextPage,
-        hasPrevPage,
-      },
-      filters: {
-        sortBy,
-        order: order === 1 ? 'asc' : 'desc',
-        search,
-        category,
-        anime,
-        minPrice: minPrice || 0,
-        maxPrice: maxPrice || Infinity,
-        inStock,
-        featured,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
       },
     });
 
   } catch (error) {
-    console.error('❌ Get products error:', error);
+    console.error('Get products by anime error:', error);
     return NextResponse.json(
       { 
         success: false,

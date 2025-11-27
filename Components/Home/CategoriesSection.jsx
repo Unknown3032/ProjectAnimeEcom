@@ -140,7 +140,7 @@ export default function CategoriesSection() {
     };
 
     const handleClick = () => {
-      router.push(`/categories/${category.slug}`);
+      router.push(`/productspage/${category.slug}`);
     };
 
     // Get primary image or first image from images array
@@ -373,10 +373,10 @@ export default function CategoriesSection() {
         <div className="text-center mt-16 md:mt-20">
           <button 
             onClick={() => router.push('/categories')}
-            className="group inline-flex items-center gap-4 px-10 md:px-12 py-4 md:py-5 border border-black overflow-hidden relative hover:text-white transition-colors duration-500"
+            className="group inline-flex items-center cursor-pointer gap-4 px-10 md:px-12 py-4 md:py-5 border border-black overflow-hidden relative hover:text-white transition-colors duration-500"
           >
             <span className="relative z-10 text-sm font-medium tracking-[0.2em] uppercase">
-              {pagination.total > 6 ? 'View All Categories' : 'View All Products'}
+              {'View All Categories'}
             </span>
             <svg 
               className="relative z-10 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" 

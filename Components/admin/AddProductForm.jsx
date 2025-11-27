@@ -128,7 +128,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         price: "",
         originalPrice: "",
         discount: 0,
-        currency: "USD",
+        currency: "INR",
 
         // Inventory
         stock: "",

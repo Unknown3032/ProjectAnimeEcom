@@ -1,16 +1,23 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useParams } from 'next/navigation';
 import { gsap } from 'gsap';
-import HeroBanner from '../../../Components/Products/HeroBanner';
-import CategoryBanner from '../../../Components/Products/CategoryBanner'
-import ProductFilters from '../../../Components/Products/ProductFilters';
-import ProductGrid from '../../../Components/Products/ProductGrid';
-import { getCategories } from '../../../lib/api/categories';
+import HeroBanner from '../../../Components/Products//HeroBanner';
+import CategoryBanner from '../../../Components/Products//CategoryBanner';
+import ProductFilters from '../../../Components/Products//ProductFilters';
+import ProductGrid from '../../../Components/Products//ProductGrid';
+import { getCategories } from '@/lib/api/categories';
+import { getAnimes } from '@/lib/api/animes'; // Create this
 
 export default function ProductsPage() {
+  const params = useParams();
+  const categorySlug = params.slug || 'all';
+
   const [categories, setCategories] = useState([]);
+  const [animes, setAnimes] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedAnime, setSelectedAnime] = useState(null);
   const [priceRange, setPriceRange] = useState({ min: 0, max: Infinity });
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -20,16 +27,21 @@ export default function ProductsPage() {
   
   const progressBarRef = useRef(null);
 
-  // Fetch categories on mount
+  // Fetch categories and animes on mount
   useEffect(() => {
-    async function fetchCategories() {
+    async function fetchData() {
       try {
         setLoading(true);
-        const response = await getCategories({ 
+        
+        // Fetch categories
+        const categoriesResponse = await getCategories({ 
           includeInactive: false 
         });
+
+        // Fetch animes
+        const animesResponse = await getAnimes();
         
-        if (response.success) {
+        if (categoriesResponse.success) {
           const allCategory = {
             _id: 'all',
             name: 'All Products',
@@ -40,46 +52,42 @@ export default function ProductsPage() {
             isActive: true
           };
           
-          setCategories([allCategory, ...response.data]);
-          setSelectedCategory(allCategory);
+          const categoriesList = [allCategory, ...categoriesResponse.data];
+          setCategories(categoriesList);
+          
+          const foundCategory = categoriesList.find(cat => cat.slug === categorySlug);
+          setSelectedCategory(foundCategory || allCategory);
+          
           setError(null);
         } else {
-          setError(response.error || 'Failed to load categories');
-          // Set default category even on error
-          const allCategory = {
-            _id: 'all',
-            name: 'All Products',
-            slug: 'all',
-            description: 'Browse our entire collection',
-            tagline: 'Complete Collection',
-            image: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=1200&h=400&fit=crop',
-            isActive: true
-          };
-          setCategories([allCategory]);
-          setSelectedCategory(allCategory);
+          setError(categoriesResponse.error || 'Failed to load categories');
         }
+
+        // Set animes
+        if (animesResponse && animesResponse.success) {
+          setAnimes(animesResponse.data || []);
+        }
+
       } catch (error) {
-        console.error('Failed to fetch categories:', error);
-        setError('Failed to load categories');
-        // Set default category
-        const allCategory = {
-          _id: 'all',
-          name: 'All Products',
-          slug: 'all',
-          description: 'Browse our entire collection',
-          tagline: 'Complete Collection',
-          image: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=1200&h=400&fit=crop',
-          isActive: true
-        };
-        setCategories([allCategory]);
-        setSelectedCategory(allCategory);
+        console.error('Failed to fetch data:', error);
+        setError('Failed to load data');
       } finally {
         setLoading(false);
       }
     }
 
-    fetchCategories();
-  }, []);
+    fetchData();
+  }, [categorySlug]);
+
+  // Update selected category when slug changes
+  useEffect(() => {
+    if (categories.length > 0 && categorySlug) {
+      const foundCategory = categories.find(cat => cat.slug === categorySlug);
+      if (foundCategory) {
+        setSelectedCategory(foundCategory);
+      }
+    }
+  }, [categorySlug, categories]);
 
   // Scroll progress indicator
   useEffect(() => {
@@ -107,6 +115,17 @@ export default function ProductsPage() {
 
   const handleFilterToggle = () => {
     setMobileFiltersOpen(!mobileFiltersOpen);
+  };
+
+  const handleClearFilters = () => {
+    setPriceRange({ min: 0, max: Infinity });
+    setSearchQuery('');
+    setSelectedAnime(null);
+    const allCategory = categories.find(cat => cat.slug === 'all');
+    if (allCategory) {
+      setSelectedCategory(allCategory);
+      window.history.pushState(null, '', '/products/all');
+    }
   };
 
   // Prevent body scroll when mobile filters are open
@@ -137,19 +156,14 @@ export default function ProductsPage() {
     <div className="min-h-screen bg-white">
       {/* Scroll progress bar */}
       <div className="fixed top-0 left-0 w-full h-1 bg-gray-100 z-50">
-        <div
-          ref={progressBarRef}
-          className="h-full bg-black"
-        ></div>
+        <div ref={progressBarRef} className="h-full bg-black"></div>
       </div>
 
       {/* Error Banner */}
       {error && (
         <div className="bg-red-50 border-b border-red-200 px-4 py-3">
           <div className="max-w-[1800px] mx-auto">
-            <p className="text-sm text-red-800 text-center">
-              {error}
-            </p>
+            <p className="text-sm text-red-800 text-center">{error}</p>
           </div>
         </div>
       )}
@@ -160,62 +174,67 @@ export default function ProductsPage() {
           <HeroBanner />
           {selectedCategory && <CategoryBanner category={selectedCategory} />}
 
-          <div className="flex flex-col lg:flex-row gap-12">
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
             {/* Filters Sidebar */}
             <aside
               className={`
-                lg:w-96 lg:block
+                lg:w-80 xl:w-96 lg:block
                 ${mobileFiltersOpen ? 'block' : 'hidden'}
                 fixed lg:sticky top-0 lg:top-8
                 inset-0 lg:inset-auto
-                bg-black/60 lg:bg-transparent
+                bg-white lg:bg-transparent
                 z-[60] lg:z-auto
-                p-4 lg:p-0
+                p-6 lg:p-0
                 overflow-y-auto
                 lg:h-[calc(100vh-4rem)]
-                backdrop-blur-sm lg:backdrop-blur-none
               `}
-              onClick={(e) => {
-                if (e.target === e.currentTarget) setMobileFiltersOpen(false);
-              }}
             >
-              <div className="h-full lg:h-auto">
-                <div className="lg:hidden flex justify-between items-center mb-6 p-6 bg-white rounded-t-lg">
-                  <h3 className="font-display text-2xl font-bold tracking-tight">Filters</h3>
-                  <button
-                    onClick={() => setMobileFiltersOpen(false)}
-                    className="text-black hover:bg-gray-100 p-3 transition-colors duration-300 rounded-lg"
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <ProductFilters
-                  categories={categories}
-                  selectedCategory={selectedCategory}
-                  priceRange={priceRange}
-                  searchQuery={searchQuery}
-                  onCategoryChange={(category) => {
-                    setSelectedCategory(category);
-                    setMobileFiltersOpen(false);
-                  }}
-                  onPriceRangeChange={(range) => {
-                    setPriceRange(range);
-                    setMobileFiltersOpen(false);
-                  }}
-                  onSearchChange={setSearchQuery}
-                />
+              {/* Mobile Close Button */}
+              <div className="lg:hidden flex justify-between items-center mb-6 pb-4 border-b">
+                <h3 className="text-xl font-bold">Filters</h3>
+                <button
+                  onClick={() => setMobileFiltersOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
+
+              <ProductFilters
+                categories={categories}
+                animes={animes}
+                selectedCategory={selectedCategory}
+                selectedAnime={selectedAnime}
+                priceRange={priceRange}
+                searchQuery={searchQuery}
+                onCategoryChange={(category) => {
+                  setSelectedCategory(category);
+                  setMobileFiltersOpen(false);
+                  window.history.pushState(null, '', `/productspage/${category.slug}`);
+                }}
+                onAnimeChange={(anime) => {
+                  setSelectedAnime(anime);
+                  setMobileFiltersOpen(false);
+                }}
+                onPriceRangeChange={(range) => {
+                  setPriceRange(range);
+                }}
+                onSearchChange={setSearchQuery}
+                onClearAll={handleClearFilters}
+              />
             </aside>
 
             {/* Products Grid */}
-            <main className="flex-1 min-w-0">
+            <main className="flex-1 ">
               <ProductGrid
                 selectedCategory={selectedCategory}
+                selectedAnime={selectedAnime}
                 priceRange={priceRange}
                 searchQuery={searchQuery}
                 onFilterToggle={handleFilterToggle}
+                onClearFilters={handleClearFilters}
               />
             </main>
           </div>
@@ -246,6 +265,14 @@ export default function ProductsPage() {
           </div>
         </footer>
       </div>
+
+      {/* Mobile Overlay */}
+      {mobileFiltersOpen && (
+        <div
+          onClick={() => setMobileFiltersOpen(false)}
+          className="fixed inset-0 bg-black/60 z-50 lg:hidden backdrop-blur-sm"
+        />
+      )}
     </div>
   );
 }
