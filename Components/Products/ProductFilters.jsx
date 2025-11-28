@@ -3,24 +3,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 
+// Updated price ranges for INR
 const priceRanges = [
   { id: 'all', label: 'All Prices', min: 0, max: Infinity },
-  { id: 'under25', label: 'Under $25', min: 0, max: 25 },
-  { id: '25to50', label: '$25 - $50', min: 25, max: 50 },
-  { id: '50to100', label: '$50 - $100', min: 50, max: 100 },
-  { id: '100to200', label: '$100 - $200', min: 100, max: 200 },
-  { id: 'over200', label: 'Over $200', min: 200, max: Infinity },
+  { id: 'under500', label: 'Under ₹500', min: 0, max: 500 },
+  { id: '500to1000', label: '₹500 - ₹1,000', min: 500, max: 1000 },
+  { id: '1000to2500', label: '₹1,000 - ₹2,500', min: 1000, max: 2500 },
+  { id: '2500to5000', label: '₹2,500 - ₹5,000', min: 2500, max: 5000 },
+  { id: 'over5000', label: 'Over ₹5,000', min: 5000, max: Infinity },
 ];
 
 export default function ProductFilters({
   categories = [],
-  animes = [], // Add animes prop
+  animes = [],
   selectedCategory,
-  selectedAnime, // Add selectedAnime prop
+  selectedAnime,
   priceRange,
   searchQuery,
   onCategoryChange,
-  onAnimeChange, // Add onAnimeChange prop
+  onAnimeChange,
   onPriceRangeChange,
   onSearchChange,
 }) {
@@ -312,7 +313,7 @@ export default function ProductFilters({
         </div>
       )}
 
-      {/* Price Range */}
+      {/* Price Range - UPDATED FOR INR */}
       <div className="filter-section mb-8">
         <button
           onClick={() => toggleSection('price')}
@@ -320,7 +321,7 @@ export default function ProductFilters({
         >
           <div className="flex items-center gap-2">
             <label className="text-[10px] font-semibold tracking-[0.2em] text-gray-500 cursor-pointer">
-              PRICE RANGE
+              PRICE RANGE (INR)
             </label>
             {selectedPriceRangeId !== 'all' && (
               <span className="flex items-center justify-center w-5 h-5 bg-black text-white text-[10px] font-bold rounded-full">
@@ -378,8 +379,6 @@ export default function ProductFilters({
           <div className="w-2 h-2 border border-black rotate-45 animate-pulse" style={{ animationDelay: '1s' }}></div>
         </div>
       </div>
-
-     
     </div>
   );
 }

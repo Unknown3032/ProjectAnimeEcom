@@ -363,7 +363,7 @@ export default function ProductCard({ product, index }) {
               </span>
             )}
             {hasDiscount && (
-              <span className="bg-red-600 text-white px-4 py-2 text-[10px] font-semibold tracking-[0.2em]">
+              <span className="bg-black text-white px-4 py-2 text-[10px] font-semibold tracking-[0.2em]">
                 -{discountPercent}%
               </span>
             )}

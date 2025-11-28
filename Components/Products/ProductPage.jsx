@@ -42,9 +42,9 @@ export default function SingleProductPage() {
 
   // Format price in INR
   const formatINR = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -111,40 +111,44 @@ export default function SingleProductPage() {
 
   // Format dimensions safely
   const formatDimensions = (dimensions) => {
-    if (!dimensions || typeof dimensions !== 'object') return null;
-    
+    if (!dimensions || typeof dimensions !== "object") return null;
+
     const { length, width, height, unit } = dimensions;
-    
+
     if (!length && !width && !height) return null;
-    
-    return `${length || 0} × ${width || 0} × ${height || 0} ${unit || 'cm'}`;
+
+    return `${length || 0} × ${width || 0} × ${height || 0} ${unit || "cm"}`;
   };
 
   // Format specifications value safely
   const formatSpecValue = (value) => {
     // Handle null or undefined
-    if (value === null || value === undefined) return 'N/A';
-    
+    if (value === null || value === undefined) return "N/A";
+
     // Handle arrays
     if (Array.isArray(value)) {
-      return value.join(', ');
+      return value.join(", ");
     }
-    
+
     // Handle objects (like dimensions)
-    if (typeof value === 'object') {
+    if (typeof value === "object") {
       // Check if it's a dimensions object
-      if (value.length !== undefined || value.width !== undefined || value.height !== undefined) {
+      if (
+        value.length !== undefined ||
+        value.width !== undefined ||
+        value.height !== undefined
+      ) {
         const formatted = formatDimensions(value);
-        return formatted || 'N/A';
+        return formatted || "N/A";
       }
       // For other objects, try to stringify
       try {
         return JSON.stringify(value);
       } catch {
-        return 'N/A';
+        return "N/A";
       }
     }
-    
+
     // Handle primitives (string, number, boolean)
     return String(value);
   };
@@ -546,7 +550,7 @@ export default function SingleProductPage() {
             </Link>
             <span>/</span>
             <Link
-              href="/products"
+              href="/productspage/all"
               style={{
                 color: "rgba(0,0,0,0.6)",
                 textDecoration: "none",
@@ -989,7 +993,8 @@ export default function SingleProductPage() {
                     : "Out of Stock"}
                 </button>
 
-                <button
+                {/* to do create an functional wishlist  */}
+                {/* <button
                   onClick={handleAddToWishlist}
                   style={{
                     width: "100%",
@@ -1016,7 +1021,7 @@ export default function SingleProductPage() {
                   }}
                 >
                   Add to Wishlist
-                </button>
+                </button> */}
               </div>
 
               {/* Product Meta */}
@@ -1146,9 +1151,9 @@ export default function SingleProductPage() {
                       {Object.entries(product.specifications).map(
                         ([key, value]) => {
                           const formattedValue = formatSpecValue(value);
-                          
+
                           // Skip if value is null or N/A after formatting
-                          if (!formattedValue || formattedValue === 'N/A') {
+                          if (!formattedValue || formattedValue === "N/A") {
                             return null;
                           }
 
@@ -1425,7 +1430,9 @@ export default function SingleProductPage() {
                             fontWeight: 300,
                           }}
                         >
-                          {formatINR(featuredProduct.salePrice || featuredProduct.price)}
+                          {formatINR(
+                            featuredProduct.salePrice || featuredProduct.price
+                          )}
                         </span>
 
                         {getReviewCount(featuredProduct) > 0 && (

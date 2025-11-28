@@ -36,11 +36,6 @@ export default function FeaturedProducts() {
   // Helper function to get image URL with comprehensive error handling
   const getImageUrl = (imagePath) => {
     try {
-      // Check if imagePath exists and is a string
-      // if (!imagePath || typeof imagePath !== 'string') {
-      //   // console.warn('Invalid image path:', imagePath);
-      //   return '/placeholder-image.jpg';
-      // }
 
       // Trim whitespace
       const trimmedPath = imagePath.url;
@@ -413,7 +408,7 @@ export default function FeaturedProducts() {
 
           {/* Discount - Updated to show calculated percentage */}
           {hasDiscount && !isOutOfStock && (
-            <div className="absolute top-4 left-4 px-3 py-1.5 bg-red-600 text-white text-xs font-bold z-10">
+            <div className="absolute top-4 left-4 px-3 py-1.5 bg-black text-white text-xs font-bold z-10">
               -{discountPercent}%
             </div>
           )}

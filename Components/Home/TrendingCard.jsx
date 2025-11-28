@@ -89,7 +89,7 @@ export default function TrendingCard({ product, index }) {
       {/* Trending Number */}
       <div className="absolute top-4 left-4 md:top-6 md:left-6 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center border border-white">
         <span className="text-xl md:text-2xl font-light text-white">
-          {product.trending}
+          {index}
         </span>
       </div>
 

@@ -337,7 +337,7 @@ export default function TrendingProducts({ initialProducts = [] }) {
                 key={product._id || product.id} 
                 className="trending-card w-[85vw] sm:w-[70vw] md:w-[55vw] lg:w-[40vw] xl:w-[35vw] flex-shrink-0"
               >
-                <TrendingCard product={product} index={index} />
+                <TrendingCard product={product} index={index+1} />
               </div>
             ))}
           </div>

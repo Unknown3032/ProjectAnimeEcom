@@ -13,15 +13,15 @@ export default function PromoBanner() {
   const promoMessages = [
     {
       text: "🎉 FLASH SALE: 50% OFF ON ALL PRODUCTS",
-      link: "/products",
+      link: "/productspage/all",
     },
     {
-      text: "🚚 FREE SHIPPING ON ORDERS OVER $50",
-      link: "/products",
+      text: "🚚 FREE SHIPPING ON ORDERS OVER ₹500",
+      link: "/productspage/all",
     },
     {
       text: "⭐ NEW ARRIVALS - SHOP NOW",
-      link: "/products",
+      link: "/productspage/all",
     },
   ];
 
