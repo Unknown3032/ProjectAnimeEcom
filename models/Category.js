@@ -1,3 +1,4 @@
+// models/Category.js
 import mongoose from "mongoose";
 
 const categorySchema = new mongoose.Schema(
@@ -15,7 +16,6 @@ const categorySchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      // Remove index: true from here since we define it separately below
     },
     description: {
       type: String,
@@ -43,12 +43,10 @@ const categorySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       default: null,
-      // Remove index: true from here
     },
     isActive: {
       type: Boolean,
       default: true,
-      // Remove index: true from here
     },
     isFeatured: {
       type: Boolean,
@@ -71,17 +69,17 @@ const categorySchema = new mongoose.Schema(
   }
 );
 
-// Define indexes separately (not in field definitions)
+// Define indexes separately
 categorySchema.index({ slug: 1 });
 categorySchema.index({ parent: 1 });
 categorySchema.index({ isActive: 1, order: 1 });
 categorySchema.index({ name: 'text', description: 'text' });
 
-// Virtual for product count (requires Product model)
+// Virtual for product count
 categorySchema.virtual('productCount', {
   ref: 'Product',
   localField: '_id',
-  foreignField: 'category',
+  foreignField: 'categoryRef',
   count: true
 });
 
@@ -93,14 +91,32 @@ categorySchema.virtual('subcategories', {
 });
 
 // Pre-save middleware to generate slug if not provided
-categorySchema.pre('save', function(next) {
+categorySchema.pre('save', async function(next) {
   if (!this.slug && this.name) {
-    this.slug = this.name
+    let baseSlug = this.name
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim();
+    
+    let slug = baseSlug;
+    let counter = 1;
+    
+    // Ensure unique slug
+    while (true) {
+      const existingCategory = await mongoose.models.Category.findOne({ 
+        slug, 
+        _id: { $ne: this._id } 
+      });
+      
+      if (!existingCategory) break;
+      
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+    
+    this.slug = slug;
   }
   next();
 });

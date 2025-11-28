@@ -1,3 +1,4 @@
+// app/api/products/add/route.js
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/connectDb';
 import Product from '@/models/Product';
@@ -26,7 +27,7 @@ export async function POST(request) {
       );
     }
 
-    console.log('Received product data - Name:', body.name, 'Anime:', body.anime?.name);
+    console.log('Received product data - Name:', body.name, 'Category:', body.categoryRef || body.category);
 
     // Connect to database
     try {
@@ -48,7 +49,7 @@ export async function POST(request) {
     if (!body.description?.trim()) missingFields.push('description');
     if (!body.price) missingFields.push('price');
     if (!body.sku?.trim()) missingFields.push('sku');
-    if (!body.category) missingFields.push('category');
+    if (!body.categoryRef && !body.category) missingFields.push('category');
     if (!body.brand?.trim()) missingFields.push('brand');
     if (!body.images || body.images.length === 0) missingFields.push('images');
     if (!body.anime?.name?.trim()) missingFields.push('anime.name');
@@ -73,32 +74,126 @@ export async function POST(request) {
       );
     }
 
-    // Validate category exists
-    let categoryExists;
+    // Validate and find category - UPDATED FOR HYBRID APPROACH
+    let categoryDoc;
     try {
-      categoryExists = await Category.findOne({ 
-        $or: [{ slug: body.category }, { name: body.category }] 
-      });
+      const categoryIdentifier = body.categoryRef || body.category;
+      
+      // Try to find by ID first, then by name or slug
+      if (categoryIdentifier.match(/^[0-9a-fA-F]{24}$/)) {
+        // Valid ObjectId
+        categoryDoc = await Category.findById(categoryIdentifier);
+      } else {
+        // Find by name or slug
+        categoryDoc = await Category.findOne({ 
+          $or: [
+            { slug: categoryIdentifier },
+            { name: categoryIdentifier }
+          ] 
+        });
+      }
+
+      if (!categoryDoc) {
+        console.error('Category not found:', categoryIdentifier);
+        return NextResponse.json(
+          { 
+            error: 'Invalid category',
+            details: {
+              validationErrors: {
+                category: `Category "${categoryIdentifier}" does not exist`
+              }
+            }
+          },
+          { 
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
+      console.log('Found category:', categoryDoc.name, 'ID:', categoryDoc._id);
     } catch (err) {
       console.error('Error finding category:', err);
-    }
-
-    if (!categoryExists) {
-      console.error('Category not found:', body.category);
       return NextResponse.json(
         { 
-          error: 'Invalid category',
-          details: {
-            validationErrors: {
-              category: `Category "${body.category}" does not exist`
-            }
-          }
+          error: 'Error validating category',
+          details: { message: err.message }
         },
         { 
-          status: 400,
+          status: 500,
           headers: { 'Content-Type': 'application/json' }
         }
       );
+    }
+
+    // Validate and find subcategory if provided - UPDATED FOR HYBRID APPROACH
+    let subCategoryDoc = null;
+    if (body.subCategoryRef || body.subCategory) {
+      try {
+        const subCategoryIdentifier = body.subCategoryRef || body.subCategory;
+        
+        if (subCategoryIdentifier.match(/^[0-9a-fA-F]{24}$/)) {
+          subCategoryDoc = await Category.findById(subCategoryIdentifier);
+        } else {
+          subCategoryDoc = await Category.findOne({ 
+            $or: [
+              { slug: subCategoryIdentifier },
+              { name: subCategoryIdentifier }
+            ],
+            parent: categoryDoc._id // Ensure it's a child of selected category
+          });
+        }
+
+        if (!subCategoryDoc) {
+          console.error('Subcategory not found:', subCategoryIdentifier);
+          return NextResponse.json(
+            { 
+              error: 'Invalid subcategory',
+              details: {
+                validationErrors: {
+                  subCategory: `Subcategory "${subCategoryIdentifier}" does not exist`
+                }
+              }
+            },
+            { 
+              status: 400,
+              headers: { 'Content-Type': 'application/json' }
+            }
+          );
+        }
+
+        // Verify subcategory belongs to the selected category
+        if (subCategoryDoc.parent && subCategoryDoc.parent.toString() !== categoryDoc._id.toString()) {
+          return NextResponse.json(
+            { 
+              error: 'Invalid subcategory',
+              details: {
+                validationErrors: {
+                  subCategory: 'Subcategory does not belong to the selected category'
+                }
+              }
+            },
+            { 
+              status: 400,
+              headers: { 'Content-Type': 'application/json' }
+            }
+          );
+        }
+
+        console.log('Found subcategory:', subCategoryDoc.name, 'ID:', subCategoryDoc._id);
+      } catch (err) {
+        console.error('Error finding subcategory:', err);
+        return NextResponse.json(
+          { 
+            error: 'Error validating subcategory',
+            details: { message: err.message }
+          },
+          { 
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          }
+        );
+      }
     }
 
     // Find or create anime
@@ -122,10 +217,9 @@ export async function POST(request) {
           name: body.anime.name.trim(),
           slug: animeSlug,
           description: body.anime.description || `Anime series: ${body.anime.name}`,
-          // Use first product image or a placeholder
           image: body.images && body.images.length > 0 
             ? (typeof body.images[0] === 'string' ? body.images[0] : body.images[0].url)
-            : '/images/anime-placeholder.jpg', // Add a default placeholder
+            : '/images/anime-placeholder.jpg',
           genre: body.anime.genre || [],
           studio: body.anime.studio || 'Unknown',
           releaseYear: body.anime.releaseYear || new Date().getFullYear(),
@@ -140,7 +234,6 @@ export async function POST(request) {
       console.error('Error with anime:', animeError);
       console.error('Anime error details:', animeError.errors);
       
-      // If anime creation fails, return detailed error
       if (animeError.name === 'ValidationError') {
         const validationErrors = {};
         Object.keys(animeError.errors).forEach(key => {
@@ -211,7 +304,7 @@ export async function POST(request) {
       slugCounter++;
     }
 
-    // Prepare product data
+    // Prepare product data - UPDATED FOR HYBRID APPROACH
     const productData = {
       name: body.name.trim(),
       slug: finalSlug,
@@ -226,8 +319,12 @@ export async function POST(request) {
         episode: body.anime.episode?.trim() || ''
       },
       
-      category: categoryExists.name,
-      subCategory: body.subCategory || '',
+      // HYBRID CATEGORY APPROACH - Store both reference and name
+      categoryRef: categoryDoc._id,
+      category: categoryDoc.name, // This will be auto-populated by pre-save hook, but we set it anyway
+      subCategoryRef: subCategoryDoc?._id || null,
+      subCategory: subCategoryDoc?.name || '',
+      
       tags: body.tags || [],
       
       price: parseFloat(body.price),
@@ -277,7 +374,7 @@ export async function POST(request) {
       seo: {
         metaTitle: body.seo?.metaTitle || body.name,
         metaDescription: body.seo?.metaDescription || body.description.substring(0, 160),
-        metaKeywords: body.seo?.metaKeywords || [body.name, animeDoc.name, body.category]
+        metaKeywords: body.seo?.metaKeywords || [body.name, animeDoc.name, categoryDoc.name]
       },
       
       relatedProducts: body.relatedProducts || [],
@@ -289,7 +386,11 @@ export async function POST(request) {
     console.log('Creating product with data:', { 
       name: productData.name, 
       slug: productData.slug,
-      sku: productData.sku 
+      sku: productData.sku,
+      categoryRef: productData.categoryRef,
+      category: productData.category,
+      subCategoryRef: productData.subCategoryRef,
+      subCategory: productData.subCategory
     });
 
     // Create product
@@ -346,12 +447,13 @@ export async function POST(request) {
       });
     } catch (err) {
       console.error('Error updating anime count:', err);
-      // Non-critical, continue
     }
 
     // Populate and return
     try {
       const populatedProduct = await Product.findById(product._id)
+        .populate('categoryRef', 'name slug description')
+        .populate('subCategoryRef', 'name slug description')
         .populate('relatedProducts', 'name slug price images')
         .lean();
 
@@ -365,7 +467,6 @@ export async function POST(request) {
       });
     } catch (err) {
       console.error('Error populating product:', err);
-      // Return unpopulated product
       return NextResponse.json({
         success: true,
         data: product,

@@ -17,8 +17,14 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
   const [animeList, setAnimeList] = useState([]);
   const [animeSearch, setAnimeSearch] = useState("");
   const [loadingAnime, setLoadingAnime] = useState(false);
+  
+  // Category states - UPDATED
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState("");
+  const [subCategories, setSubCategories] = useState([]);
+  const [loadingSubCategories, setLoadingSubCategories] = useState(false);
 
   // Initialize form with all fields properly defined
   const [formData, setFormData] = useState(() => {
@@ -27,7 +33,9 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         // Basic Information
         name: initialData.name || "",
         sku: initialData.sku || "",
+        categoryRef: initialData.categoryRef?._id || initialData.categoryRef || "",
         category: initialData.category || "",
+        subCategoryRef: initialData.subCategoryRef?._id || initialData.subCategoryRef || null,
         subCategory: initialData.subCategory || "",
         description: initialData.description || "",
         shortDescription: initialData.shortDescription || "",
@@ -110,7 +118,9 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         // Basic Information
         name: "",
         sku: "",
+        categoryRef: "",
         category: "",
+        subCategoryRef: null,
         subCategory: "",
         description: "",
         shortDescription: "",
@@ -128,7 +138,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         price: "",
         originalPrice: "",
         discount: 0,
-        currency: "INR",
+        currency: "USD",
 
         // Inventory
         stock: "",
@@ -199,39 +209,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
   const submitButtonText = isEdit ? "Update Product" : "Publish Product";
   const draftButtonText = isEdit ? "Save Changes" : "Save as Draft";
 
-  const defaultCategories = [
-    { value: "", label: "Select Category" },
-    { value: "Clothing", label: "Clothing & Apparel" },
-    { value: "Accessories", label: "Accessories" },
-    { value: "Figures", label: "Figures & Collectibles" },
-    { value: "Plushies", label: "Plushies & Toys" },
-    { value: "Posters", label: "Posters & Wall Art" },
-    { value: "Home Decor", label: "Home Decor" },
-    { value: "Stationery", label: "Stationery" },
-    { value: "Electronics", label: "Electronics" },
-    { value: "Collectibles", label: "Collectibles" },
-    { value: "Manga", label: "Manga & Books" },
-    { value: "Cosplay", label: "Cosplay" },
-    { value: "Keychains", label: "Keychains & Charms" },
-    { value: "Bags", label: "Bags & Backpacks" },
-    { value: "Jewelry", label: "Jewelry" },
-  ];
-
-  const subcategories = {
-    Clothing: ["T-Shirts", "Hoodies", "Jackets", "Pants", "Socks", "Hats", "Shoes"],
-    Accessories: ["Watches", "Wallets", "Belts", "Scarves", "Gloves"],
-    Figures: ["Action Figures", "Nendoroid", "Figma", "Scale Figures", "Prize Figures"],
-    Plushies: ["Small Plushies", "Medium Plushies", "Large Plushies", "Plush Sets"],
-    Posters: ["Wall Scrolls", "Canvas Prints", "Poster Sets", "Mini Posters"],
-    Stationery: ["Notebooks", "Pens", "Stickers", "Bookmarks", "Cards"],
-    Keychains: ["Acrylic Keychains", "Metal Keychains", "Rubber Keychains", "Charm Sets"],
-    Cosplay: ["Costumes", "Wigs", "Props", "Accessories"],
-    Bags: ["Backpacks", "Messenger Bags", "Tote Bags", "Drawstring Bags"],
-    Manga: ["Manga Volumes", "Light Novels", "Art Books", "Guide Books"],
-    "Home Decor": ["Pillows", "Blankets", "Lamps", "Clocks", "Decorations"],
-    Electronics: ["Headphones", "USB Drives", "Phone Accessories", "Gaming Accessories"],
-  };
-
   const steps = [
     { number: 1, title: "Basic Info", icon: "📝" },
     { number: 2, title: "Pricing", icon: "💰" },
@@ -240,7 +217,89 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     { number: 5, title: "Review", icon: "✓" },
   ];
 
-  // Fetch categories from API
+  // Fetch categories from API - UPDATED
+  const fetchCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const response = await fetch('/api/admin/products/categories?parentId=null');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.categories && data.categories.length > 0) {
+        const formattedCategories = [
+          { value: "", label: "Select Category", _id: "", name: "" },
+          ...data.categories.map((cat) => ({
+            value: cat._id, // Use _id as value
+            label: cat.productCount > 0 
+              ? `${cat.label || cat.name} (${cat.productCount} products)` 
+              : (cat.label || cat.name),
+            name: cat.name,
+            slug: cat.slug,
+            _id: cat._id,
+          })),
+        ];
+        setCategories(formattedCategories);
+      } else {
+        setCategories([{ value: "", label: "Select Category", _id: "", name: "" }]);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setCategories([{ value: "", label: "Select Category", _id: "", name: "" }]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  // Fetch subcategories - NEW
+  const fetchSubCategories = async (categoryId) => {
+    if (!categoryId) {
+      setSubCategories([]);
+      setSelectedSubCategoryId("");
+      return;
+    }
+
+    try {
+      setLoadingSubCategories(true);
+      const response = await fetch(`/api/admin/products/categories/${categoryId}/subcategories`);
+      
+      if (!response.ok) {
+        console.warn('Failed to fetch subcategories');
+        setSubCategories([]);
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data && data.data.length > 0) {
+        const formattedSubCategories = [
+          { value: "", label: "Select Subcategory (Optional)", _id: "", name: "" },
+          ...data.data.map((subCat) => ({
+            value: subCat._id,
+            label: subCat.productCount > 0 
+              ? `${subCat.label || subCat.name} (${subCat.productCount} products)` 
+              : (subCat.label || subCat.name),
+            name: subCat.name,
+            slug: subCat.slug,
+            _id: subCat._id,
+          })),
+        ];
+        setSubCategories(formattedSubCategories);
+      } else {
+        setSubCategories([]);
+      }
+    } catch (error) {
+      console.error("Error fetching subcategories:", error);
+      setSubCategories([]);
+    } finally {
+      setLoadingSubCategories(false);
+    }
+  };
+
+  // Initial data load - UPDATED
   useEffect(() => {
     fetchCategories();
     
@@ -248,37 +307,50 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     if (isEdit && initialData?.anime?.name) {
       setAnimeSearch(initialData.anime.name);
     }
+    
+    // If editing, set selected category and subcategory IDs
+    if (isEdit && initialData) {
+      const catId = initialData.categoryRef?._id || initialData.categoryRef;
+      if (catId) {
+        setSelectedCategoryId(catId);
+      }
+      
+      const subCatId = initialData.subCategoryRef?._id || initialData.subCategoryRef;
+      if (subCatId) {
+        setSelectedSubCategoryId(subCatId);
+      }
+    }
   }, []);
 
-  const fetchCategories = async () => {
-    try {
-      setLoadingCategories(true);
-      const response = await fetch('/api/admin/products/categories');
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.categories && data.categories.length > 0) {
-          const formattedCategories = [
-            { value: "", label: "Select Category" },
-            ...data.categories.map((cat) => ({
-              value: cat._id,
-              label: cat._id,
-            })),
-          ];
-          setCategories(formattedCategories);
-        } else {
-          setCategories(defaultCategories);
-        }
-      } else {
-        setCategories(defaultCategories);
-      }
-    } catch (error) {
-      console.error("Error fetching categories:", error);
-      setCategories(defaultCategories);
-    } finally {
-      setLoadingCategories(false);
+  // Fetch subcategories when category changes - NEW
+  useEffect(() => {
+    if (selectedCategoryId) {
+      fetchSubCategories(selectedCategoryId);
+    } else {
+      setSubCategories([]);
+      setSelectedSubCategoryId("");
     }
-  };
+  }, [selectedCategoryId]);
+
+  // Set initial category on edit - UPDATED
+  useEffect(() => {
+    if (isEdit && initialData && categories.length > 0) {
+      const catId = initialData.categoryRef?._id || initialData.categoryRef;
+      if (catId && !selectedCategoryId) {
+        setSelectedCategoryId(catId);
+      }
+    }
+  }, [categories, isEdit, initialData]);
+
+  // Set initial subcategory on edit - NEW
+  useEffect(() => {
+    if (isEdit && initialData && subCategories.length > 0) {
+      const subCatId = initialData.subCategoryRef?._id || initialData.subCategoryRef;
+      if (subCatId && !selectedSubCategoryId) {
+        setSelectedSubCategoryId(subCatId);
+      }
+    }
+  }, [subCategories, isEdit, initialData]);
 
   // Search anime with debounce
   useEffect(() => {
@@ -360,6 +432,48 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
   }, [formData.name, formData.category, isEdit]);
 
+  // Handle category change - NEW
+  const handleCategoryChange = (e) => {
+    const categoryId = e.target.value;
+    setSelectedCategoryId(categoryId);
+    
+    // Find the category name
+    const selectedCategory = categories.find(cat => cat._id === categoryId);
+    
+    // Update form data with both ID and name
+    setFormData((prev) => ({
+      ...prev,
+      categoryRef: categoryId,
+      category: selectedCategory?.name || "",
+      subCategoryRef: null, // Reset subcategory when category changes
+      subCategory: ""
+    }));
+    
+    // Reset subcategory selection
+    setSelectedSubCategoryId("");
+    
+    // Clear error for this field
+    if (errors.category) {
+      setErrors((prev) => ({ ...prev, category: "" }));
+    }
+  };
+
+  // Handle subcategory change - NEW
+  const handleSubCategoryChange = (e) => {
+    const subCategoryId = e.target.value;
+    setSelectedSubCategoryId(subCategoryId);
+    
+    // Find the subcategory name
+    const selectedSubCategory = subCategories.find(subCat => subCat._id === subCategoryId);
+    
+    // Update form data with both ID and name
+    setFormData((prev) => ({
+      ...prev,
+      subCategoryRef: subCategoryId || null,
+      subCategory: selectedSubCategory?.name || ""
+    }));
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
 
@@ -436,7 +550,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     if (step === 1) {
       if (!formData.name?.trim()) newErrors.name = "Product name is required";
       if (!formData.anime?.name?.trim()) newErrors.anime = "Anime name is required";
-      if (!formData.category) newErrors.category = "Category is required";
+      if (!selectedCategoryId) newErrors.category = "Category is required";
       if (!formData.brand?.trim()) newErrors.brand = "Brand is required";
       if (!formData.description?.trim()) newErrors.description = "Description is required";
     }
@@ -491,202 +605,202 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
- const handleSubmit = async (status) => {
-  // Validate all steps before submitting
-  for (let i = 1; i <= 4; i++) {
-    if (!validateStep(i)) {
-      setCurrentStep(i);
-      toast.error(`Please complete step ${i} correctly`);
+  const handleSubmit = async (status) => {
+    // Validate all steps before submitting
+    for (let i = 1; i <= 4; i++) {
+      if (!validateStep(i)) {
+        setCurrentStep(i);
+        toast.error(`Please complete step ${i} correctly`);
+        return;
+      }
+    }
+
+    // Additional validation for category
+    if (!selectedCategoryId) {
+      toast.error("Please select a category");
+      setCurrentStep(1);
       return;
     }
-  }
 
-  setSaving(true);
-  const loadingToast = toast.loading(isEdit ? 'Updating product...' : 'Creating product...');
+    setSaving(true);
+    const loadingToast = toast.loading(isEdit ? 'Updating product...' : 'Creating product...');
 
-  try {
-    const processedImages = formData.images.map((img, index) => {
-      const imageUrl = typeof img === 'string' ? img : (img.url || img.preview || '');
-      return {
-        url: imageUrl,
-        alt: img.alt || formData.name || 'Product image',
-        isPrimary: index === 0
+    try {
+      const processedImages = formData.images.map((img, index) => {
+        const imageUrl = typeof img === 'string' ? img : (img.url || img.preview || '');
+        return {
+          url: imageUrl,
+          alt: img.alt || formData.name || 'Product image',
+          isPrimary: index === 0
+        };
+      }).filter(img => img.url.trim() !== '');
+
+      if (processedImages.length === 0) {
+        toast.dismiss(loadingToast);
+        toast.error("Please add at least one product image");
+        setCurrentStep(4);
+        setSaving(false);
+        return;
+      }
+
+      const submissionData = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        shortDescription: formData.shortDescription?.trim() || formData.description.trim().substring(0, 200),
+        
+        anime: {
+          name: formData.anime.name.trim(),
+          series: formData.anime.series?.trim() || '',
+          character: formData.anime.character?.trim() || '',
+          season: formData.anime.season?.trim() || '',
+          episode: formData.anime.episode?.trim() || '',
+        },
+        
+        // UPDATED - Send both categoryRef and category name
+        categoryRef: selectedCategoryId, // Send the ObjectId
+        category: formData.category, // Send the name (for backward compatibility)
+        subCategoryRef: selectedSubCategoryId || null, // Send the ObjectId or null
+        subCategory: formData.subCategory || '', // Send the name
+        
+        tags: formData.tags || [],
+        
+        price: parseFloat(formData.price),
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : null,
+        discount: 0,
+        currency: formData.currency || 'USD',
+        
+        stock: formData.trackQuantity ? parseInt(formData.stock) : 0,
+        sku: formData.sku,
+        variants: [],
+        
+        images: processedImages,
+        videos: [],
+        
+        specifications: {
+          material: formData.specifications?.material || '',
+          weight: formData.specifications?.weight || '',
+          dimensions: formData.specifications?.dimensions || {
+            length: 0,
+            width: 0,
+            height: 0,
+            unit: 'cm'
+          },
+          careInstructions: formData.specifications?.careInstructions || [],
+          features: formData.specifications?.features || [],
+        },
+        
+        brand: formData.brand.trim(),
+        manufacturer: formData.manufacturer?.trim() || formData.brand.trim(),
+        isOfficial: formData.isOfficial || false,
+        licensedBy: formData.licensedBy?.trim() || '',
+        
+        isAvailable: status === 'active',
+        isFeatured: formData.isFeatured || false,
+        isNewArrival: formData.isNewArrival || false,
+        isBestseller: formData.isBestseller || false,
+        isPreOrder: formData.isPreOrder || false,
+        preOrderReleaseDate: formData.preOrderReleaseDate || null,
+        
+        isLimitedEdition: formData.isLimitedEdition || false,
+        limitedQuantity: formData.limitedQuantity ? parseInt(formData.limitedQuantity) : null,
+        
+        shipping: {
+          weight: parseFloat(formData.shipping?.weight || 0.5),
+          dimensions: {
+            length: parseFloat(formData.shipping?.dimensions?.length || 0),
+            width: parseFloat(formData.shipping?.dimensions?.width || 0),
+            height: parseFloat(formData.shipping?.dimensions?.height || 0),
+          },
+          freeShipping: formData.shipping?.freeShipping || false,
+          estimatedDelivery: formData.shipping?.estimatedDelivery || '5-7 business days',
+        },
+        
+        status: status === 'active' ? 'published' : 'draft',
+        ageRating: formData.ageRating || 'All Ages',
       };
-    }).filter(img => img.url.trim() !== '');
 
-    if (processedImages.length === 0) {
-      toast.dismiss(loadingToast);
-      toast.error("Please add at least one product image");
-      setCurrentStep(4);
-      setSaving(false);
-      return;
-    }
+      console.log('Submitting product data:', submissionData);
 
-    const submissionData = {
-      name: formData.name.trim(),
-      description: formData.description.trim(),
-      shortDescription: formData.shortDescription?.trim() || formData.description.trim().substring(0, 200),
-      
-      anime: {
-        name: formData.anime.name.trim(),
-        series: formData.anime.series?.trim() || '',
-        character: formData.anime.character?.trim() || '',
-        season: formData.anime.season?.trim() || '',
-        episode: formData.anime.episode?.trim() || '',
-      },
-      
-      category: formData.category,
-      subCategory: formData.subCategory || '',
-      tags: formData.tags || [],
-      
-      price: parseFloat(formData.price),
-      originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : null,
-      discount: 0,
-      currency: formData.currency || 'USD',
-      
-      stock: formData.trackQuantity ? parseInt(formData.stock) : 0,
-      sku: formData.sku,
-      variants: [],
-      
-      images: processedImages,
-      videos: [],
-      
-      specifications: {
-        material: formData.specifications?.material || '',
-        weight: formData.specifications?.weight || '',
-        dimensions: formData.specifications?.dimensions || {
-          length: 0,
-          width: 0,
-          height: 0,
-          unit: 'cm'
+      const url = isEdit
+        ? `/api/admin/products/${initialData._id}`
+        : '/api/products/add';
+
+      const method = isEdit ? 'PATCH' : 'POST';
+
+      const response = await fetch(url, {
+        method: method,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        careInstructions: formData.specifications?.careInstructions || [],
-        features: formData.specifications?.features || [],
-      },
-      
-      brand: formData.brand.trim(),
-      manufacturer: formData.manufacturer?.trim() || formData.brand.trim(),
-      isOfficial: formData.isOfficial || false,
-      licensedBy: formData.licensedBy?.trim() || '',
-      
-      isAvailable: status === 'active',
-      isFeatured: formData.isFeatured || false,
-      isNewArrival: formData.isNewArrival || false,
-      isBestseller: formData.isBestseller || false,
-      isPreOrder: formData.isPreOrder || false,
-      preOrderReleaseDate: formData.preOrderReleaseDate || null,
-      
-      isLimitedEdition: formData.isLimitedEdition || false,
-      limitedQuantity: formData.limitedQuantity ? parseInt(formData.limitedQuantity) : null,
-      
-      shipping: {
-        weight: parseFloat(formData.shipping?.weight || 0.5),
-        dimensions: {
-          length: parseFloat(formData.shipping?.dimensions?.length || 0),
-          width: parseFloat(formData.shipping?.dimensions?.width || 0),
-          height: parseFloat(formData.shipping?.dimensions?.height || 0),
-        },
-        freeShipping: formData.shipping?.freeShipping || false,
-        estimatedDelivery: formData.shipping?.estimatedDelivery || '5-7 business days',
-      },
-      
-      status: status === 'active' ? 'published' : 'draft',
-      ageRating: formData.ageRating || 'All Ages',
-    };
+        body: JSON.stringify(submissionData),
+      });
 
-    console.log('Submitting product data:', submissionData);
+      if (!response.ok) {
+        let errorData;
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            errorData = await response.json();
+          } catch (jsonError) {
+            console.error('Error parsing error response:', jsonError);
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+          }
+        } else {
+          const textResponse = await response.text();
+          console.error('Non-JSON error response:', textResponse);
+          throw new Error(`Server error: ${response.status} - ${textResponse || response.statusText}`);
+        }
 
-    const url = isEdit
-      ? `/api/admin/products/${initialData._id}`
-      : '/api/products/add';
+        if (errorData.details?.validationErrors) {
+          const validationErrors = errorData.details.validationErrors;
+          const errorMessages = Object.values(validationErrors).join(', ');
+          throw new Error(errorMessages);
+        }
 
-    const method = isEdit ? 'PATCH' : 'POST';
+        throw new Error(errorData.error || errorData.message || 'Failed to save product');
+      }
 
-    const response = await fetch(url, {
-      method: method,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(submissionData),
-    });
-
-    // Log response details for debugging
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-    // Check if response is ok before parsing JSON
-    if (!response.ok) {
-      // Try to parse error response
-      let errorData;
+      let data;
       const contentType = response.headers.get('content-type');
       
       if (contentType && contentType.includes('application/json')) {
         try {
-          errorData = await response.json();
+          data = await response.json();
         } catch (jsonError) {
-          console.error('Error parsing error response:', jsonError);
-          throw new Error(`Server error: ${response.status} ${response.statusText}`);
+          console.error('Error parsing success response:', jsonError);
+          toast.dismiss(loadingToast);
+          toast.success(`Product ${isEdit ? 'updated' : 'created'} successfully!`);
+          setTimeout(() => {
+            router.push('/admin/products');
+          }, 1500);
+          return;
         }
       } else {
-        // Response is not JSON
-        const textResponse = await response.text();
-        console.error('Non-JSON error response:', textResponse);
-        throw new Error(`Server error: ${response.status} - ${textResponse || response.statusText}`);
+        console.warn('Response is not JSON:', await response.text());
+        throw new Error('Invalid response format from server');
       }
 
-      // Handle validation errors
-      if (errorData.details?.validationErrors) {
-        const validationErrors = errorData.details.validationErrors;
-        const errorMessages = Object.values(validationErrors).join(', ');
-        throw new Error(errorMessages);
-      }
+      toast.dismiss(loadingToast);
+      toast.success(data.message || `Product ${isEdit ? 'updated' : 'created'} successfully!`);
 
-      throw new Error(errorData.error || errorData.message || 'Failed to save product');
+      setTimeout(() => {
+        router.push('/admin/products');
+      }, 1500);
+
+    } catch (error) {
+      console.error('Error saving product:', error);
+      toast.dismiss(loadingToast);
+      
+      const errorMessage = error.message || 'Failed to save product. Please try again.';
+      toast.error(errorMessage);
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      setSaving(false);
     }
-
-    // Parse success response
-    let data;
-    const contentType = response.headers.get('content-type');
-    
-    if (contentType && contentType.includes('application/json')) {
-      try {
-        data = await response.json();
-      } catch (jsonError) {
-        console.error('Error parsing success response:', jsonError);
-        // If we get here, the operation likely succeeded but response parsing failed
-        toast.dismiss(loadingToast);
-        toast.success(`Product ${isEdit ? 'updated' : 'created'} successfully!`);
-        setTimeout(() => {
-          router.push('/admin/products');
-        }, 1500);
-        return;
-      }
-    } else {
-      console.warn('Response is not JSON:', await response.text());
-      throw new Error('Invalid response format from server');
-    }
-
-    toast.dismiss(loadingToast);
-    toast.success(data.message || `Product ${isEdit ? 'updated' : 'created'} successfully!`);
-
-    setTimeout(() => {
-      router.push('/admin/products');
-    }, 1500);
-
-  } catch (error) {
-    console.error('Error saving product:', error);
-    toast.dismiss(loadingToast);
-    
-    const errorMessage = error.message || 'Failed to save product. Please try again.';
-    toast.error(errorMessage);
-    
-    // Scroll to top to show error
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } finally {
-    setSaving(false);
-  }
-};
+  };
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -888,29 +1002,32 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                       />
                     </div>
 
-                    {/* Category */}
+                    {/* Category - UPDATED */}
                     <div>
                       <label className="block text-sm font-medium text-black mb-2">
                         Category <span className="text-red-500">*</span>
                       </label>
                       <select
-                        name="category"
-                        value={formData.category || ""}
-                        onChange={handleInputChange}
+                        name="categoryRef"
+                        value={selectedCategoryId}
+                        onChange={handleCategoryChange}
                         disabled={loadingCategories}
                         className={`w-full px-4 py-3 bg-black/5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all cursor-pointer ${
                           errors.category ? "border-red-500" : "border-black/10"
                         }`}
                       >
-                        {(categories.length > 0
-                          ? categories
-                          : defaultCategories
-                        ).map((cat) => (
-                          <option key={cat.value} value={cat.value}>
+                        {categories.map((cat) => (
+                          <option key={cat._id || cat.value} value={cat._id}>
                             {cat.label}
                           </option>
                         ))}
                       </select>
+                      {loadingCategories && (
+                        <div className="text-xs text-black/40 mt-1 flex items-center gap-2">
+                          <div className="w-3 h-3 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                          Loading categories...
+                        </div>
+                      )}
                       {errors.category && (
                         <p className="text-red-500 text-xs mt-1">
                           {errors.category}
@@ -919,25 +1036,35 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                     </div>
                   </div>
 
-                  {/* Subcategory */}
-                  {formData.category && subcategories[formData.category] && (
+                  {/* Subcategory - UPDATED */}
+                  {selectedCategoryId && (
                     <div>
                       <label className="block text-sm font-medium text-black mb-2">
                         Subcategory
                       </label>
                       <select
-                        name="subCategory"
-                        value={formData.subCategory || ""}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3 bg-black/5 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all cursor-pointer"
+                        name="subCategoryRef"
+                        value={selectedSubCategoryId}
+                        onChange={handleSubCategoryChange}
+                        disabled={loadingSubCategories || subCategories.length === 0}
+                        className="w-full px-4 py-3 bg-black/5 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <option value="">Select Subcategory</option>
-                        {subcategories[formData.category].map((sub) => (
-                          <option key={sub} value={sub}>
-                            {sub}
-                          </option>
-                        ))}
+                        {subCategories.length > 0 ? (
+                          subCategories.map((subCat) => (
+                            <option key={subCat._id || subCat.value} value={subCat._id}>
+                              {subCat.label}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="">No subcategories available</option>
+                        )}
                       </select>
+                      {loadingSubCategories && (
+                        <div className="text-xs text-black/40 mt-1 flex items-center gap-2">
+                          <div className="w-3 h-3 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                          Loading subcategories...
+                        </div>
+                      )}
                     </div>
                   )}
 

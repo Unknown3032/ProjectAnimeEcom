@@ -326,7 +326,7 @@ const ImageUploader = ({ images = [], onImagesChange }) => {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {images.map((image, index) => (
             <div
-              key={image.id}
+              key={index}
               className="relative group aspect-square bg-black/5 rounded-xl overflow-hidden border border-black/10"
             >
               <img

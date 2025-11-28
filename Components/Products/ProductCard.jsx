@@ -53,6 +53,16 @@ export default function ProductCard({ product, index }) {
 
   const inStock = isInStock();
 
+  // Format price in INR
+  const formatINR = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   // Add to cart handler
   const handleAddToCart = async (e) => {
     e.preventDefault();
@@ -312,7 +322,7 @@ export default function ProductCard({ product, index }) {
       ></div>
 
       {/* Image Container - Clickable Link */}
-      <Link href={`/products/${product?.slug || product?._id}`}>
+      <Link href={`/products/${product?._id}`}>
         <div
           ref={imageContainerRef}
           className="relative h-[500px] overflow-hidden bg-gray-100"
@@ -400,7 +410,7 @@ export default function ProductCard({ product, index }) {
       {/* Product Info */}
       <div ref={contentRef} className="p-8 bg-white">
         {/* Category/Anime - Clickable */}
-        <Link href={`/products/${product?.slug || product?._id}`}>
+        <Link href={`/products/${product?._id}`}>
           {(animeName || product?.category) && (
             <p className="text-[10px] text-gray-500 mb-3 tracking-[0.2em] font-medium uppercase hover:text-black transition-colors">
               {animeName || product?.category}
@@ -421,11 +431,11 @@ export default function ProductCard({ product, index }) {
             </p>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-black tracking-tight">
-                ${price?.toFixed(2) || "0.00"}
+                {formatINR(price)}
               </span>
               {hasDiscount && (
                 <span className="text-sm text-gray-400 line-through">
-                  ${originalPrice?.toFixed(2)}
+                  {formatINR(originalPrice)}
                 </span>
               )}
             </div>

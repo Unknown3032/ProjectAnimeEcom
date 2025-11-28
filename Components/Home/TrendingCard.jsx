@@ -10,8 +10,17 @@ export default function TrendingCard({ product, index }) {
   const overlayRef = useRef(null);
   const contentRef = useRef(null);
 
+  // Format price in INR
+  const formatINR = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   const handleMouseEnter = () => {
-    
     gsap.to(imageRef.current, {
       scale: 1.05,
       duration: 0.6,
@@ -85,9 +94,11 @@ export default function TrendingCard({ product, index }) {
       </div>
 
       {/* Badge */}
-      <div className="absolute top-4 right-4 md:top-6 md:right-6 px-2.5 py-1 md:px-3 md:py-1.5 bg-white text-black text-xs font-bold tracking-wider uppercase">
-        {product.badge}
-      </div>
+      {product.badge && (
+        <div className="absolute top-4 right-4 md:top-6 md:right-6 px-2.5 py-1 md:px-3 md:py-1.5 bg-white text-black text-xs font-bold tracking-wider uppercase">
+          {product.badge}
+        </div>
+      )}
 
       {/* Discount */}
       {discount > 0 && (
@@ -111,20 +122,23 @@ export default function TrendingCard({ product, index }) {
           {product.name}
         </h3>
 
+        {/* Updated Price Display with INR */}
         <div className="flex items-baseline gap-2 md:gap-3 mb-4 md:mb-6">
           <span className="text-2xl md:text-4xl font-light">
-            ${product.price}
+            {formatINR(product.price || 0)}
           </span>
-          {product.originalPrice && (
+          {product.originalPrice && product.originalPrice > product.price && (
             <span className="text-base md:text-lg text-white/60 line-through">
-              ${product.originalPrice}
+              {formatINR(product.originalPrice)}
             </span>
           )}
         </div>
 
-        <button className="w-full cursor-pointer py-3 border border-white text-white font-bold tracking-wider uppercase text-xs md:text-sm hover:bg-white hover:text-black transition-all duration-300">
-          <Link href={`/products/${product?._id}`}>View Product</Link>
-        </button>
+        <Link href={`/products/${product?._id}`} className="block w-full">
+          <button className="w-full cursor-pointer py-3 border border-white text-white font-bold tracking-wider uppercase text-xs md:text-sm hover:bg-white hover:text-black transition-all duration-300">
+            View Product
+          </button>
+        </Link>
       </div>
     </div>
   );

@@ -174,7 +174,7 @@ const ProductsFilters = ({ onFilterChange }) => {
       </div>
 
       {/* Category Filters */}
-      <div className="flex flex-wrap gap-2">
+      {/* <div className="flex flex-wrap gap-2">
         {categories.map((category) => (
           <button
             key={category.value}
@@ -188,14 +188,14 @@ const ProductsFilters = ({ onFilterChange }) => {
             <span>{category.label}</span>
             <span
               className={`text-xs px-2 py-0.5 rounded-full ${
-                activeCategory === category.value ? 'bg-white/20' : 'bg-black/10'
+                activeCategory === category?.value ? 'bg-white/20' : 'bg-black/10'
               }`}
             >
               {category.count}
             </span>
           </button>
         ))}
-      </div>
+      </div> */}
 
       {/* Active Filters Summary */}
       {hasActiveFilters && (

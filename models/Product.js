@@ -1,3 +1,4 @@
+// models/Product.js
 import mongoose from 'mongoose';
 
 const reviewSchema = new mongoose.Schema({
@@ -123,61 +124,26 @@ const productSchema = new mongoose.Schema({
     episode: String
   },
 
-  // Categories & Tags
+  // Categories & Tags - UPDATED FOR HYBRID APPROACH
+  categoryRef: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: true,
+    index: true
+  },
   category: {
     type: String,
     required: true,
-    enum: [
-      'Clothing',
-      'Accessories',
-      'Figures',
-      'Plushies',
-      'Posters',
-      'Home Decor',
-      'Stationery',
-      'Electronics',
-      'Collectibles',
-      'Manga',
-      'Art Books',
-      'Cosplay',
-      'Keychains',
-      'Bags',
-      'Jewelry',
-      'Other'
-    ],
     index: true
+  },
+  subCategoryRef: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    default: null
   },
   subCategory: {
     type: String,
-    enum: [
-      '',
-      // Clothing
-      'T-Shirts', 'Hoodies', 'Jackets', 'Pants', 'Socks', 'Hats', 'Shoes',
-      // Accessories
-      'Watches', 'Wallets', 'Belts', 'Scarves', 'Gloves',
-      // Figures
-      'Action Figures', 'Nendoroid', 'Figma', 'Scale Figures', 'Prize Figures',
-      // Plushies
-      'Small Plushies', 'Medium Plushies', 'Large Plushies', 'Plush Sets',
-      // Posters
-      'Wall Scrolls', 'Canvas Prints', 'Poster Sets', 'Mini Posters',
-      // Stationery
-      'Notebooks', 'Pens', 'Stickers', 'Bookmarks', 'Cards',
-      // Keychains
-      'Acrylic Keychains', 'Metal Keychains', 'Rubber Keychains', 'Charm Sets',
-      // Cosplay
-      'Costumes', 'Wigs', 'Props', 'Accessories',
-      // Bags
-      'Backpacks', 'Messenger Bags', 'Tote Bags', 'Drawstring Bags',
-      // Manga
-      'Manga Volumes', 'Light Novels', 'Art Books', 'Guide Books',
-      // Home Decor
-      'Pillows', 'Blankets', 'Lamps', 'Clocks', 'Decorations',
-      // Electronics
-      'Headphones', 'USB Drives', 'Phone Accessories', 'Gaming Accessories',
-      // Others
-      'Mugs', 'Phone Cases'
-    ]
+    default: ''
   },
   tags: [{
     type: String,
@@ -381,6 +347,7 @@ const productSchema = new mongoose.Schema({
 // Indexes for better query performance
 productSchema.index({ name: 'text', description: 'text', 'anime.name': 'text' });
 productSchema.index({ category: 1, status: 1 });
+productSchema.index({ categoryRef: 1, status: 1 });
 productSchema.index({ 'anime.name': 1, status: 1 });
 productSchema.index({ price: 1, status: 1 });
 productSchema.index({ createdAt: -1 });
@@ -408,6 +375,62 @@ productSchema.virtual('savings').get(function() {
     return this.originalPrice - this.price;
   }
   return 0;
+});
+
+// Virtual to populate full category data
+productSchema.virtual('categoryData', {
+  ref: 'Category',
+  localField: 'categoryRef',
+  foreignField: '_id',
+  justOne: true
+});
+
+// Virtual to populate full subcategory data
+productSchema.virtual('subCategoryData', {
+  ref: 'Category',
+  localField: 'subCategoryRef',
+  foreignField: '_id',
+  justOne: true
+});
+
+// Pre-save middleware to auto-populate category names from references
+productSchema.pre('save', async function(next) {
+  // Auto-populate category name from categoryRef
+  if (this.categoryRef && (this.isModified('categoryRef') || !this.category)) {
+    try {
+      const Category = mongoose.model('Category');
+      const cat = await Category.findById(this.categoryRef);
+      if (cat) {
+        this.category = cat.name;
+      } else {
+        return next(new Error('Invalid category reference'));
+      }
+    } catch (error) {
+      return next(error);
+    }
+  }
+  
+  // Auto-populate subcategory name from subCategoryRef
+  if (this.subCategoryRef && (this.isModified('subCategoryRef') || !this.subCategory)) {
+    try {
+      const Category = mongoose.model('Category');
+      const subCat = await Category.findById(this.subCategoryRef);
+      if (subCat) {
+        this.subCategory = subCat.name;
+      } else {
+        return next(new Error('Invalid subcategory reference'));
+      }
+    } catch (error) {
+      return next(error);
+    }
+  }
+  
+  // Clear subcategory if subCategoryRef is null
+  if (!this.subCategoryRef) {
+    this.subCategory = '';
+  }
+  
+  next();
 });
 
 // Pre-save middleware to generate unique slug
@@ -539,6 +562,7 @@ productSchema.statics.getFeatured = function(limit = 10) {
     isAvailable: true,
     status: 'published'
   })
+  .populate('categoryRef subCategoryRef', 'name slug')
   .limit(limit)
   .sort('-createdAt');
 };
@@ -549,6 +573,7 @@ productSchema.statics.getNewArrivals = function(limit = 10) {
     isAvailable: true,
     status: 'published'
   })
+  .populate('categoryRef subCategoryRef', 'name slug')
   .limit(limit)
   .sort('-createdAt');
 };
@@ -559,6 +584,7 @@ productSchema.statics.getBestsellers = function(limit = 10) {
     isAvailable: true,
     status: 'published'
   })
+  .populate('categoryRef subCategoryRef', 'name slug')
   .limit(limit)
   .sort('-purchases');
 };
@@ -569,11 +595,12 @@ productSchema.statics.getByAnime = function(animeName, limit = 20) {
     isAvailable: true,
     status: 'published'
   })
+  .populate('categoryRef subCategoryRef', 'name slug')
   .limit(limit)
   .sort('-rating.average');
 };
 
-productSchema.statics.getByCategory = function(category, options = {}) {
+productSchema.statics.getByCategory = function(categoryIdOrName, options = {}) {
   const { 
     subCategory, 
     limit = 20, 
@@ -582,16 +609,27 @@ productSchema.statics.getByCategory = function(category, options = {}) {
   } = options;
 
   const query = {
-    category,
     isAvailable: true,
     status: 'published'
   };
 
+  // Support both ObjectId and category name
+  if (mongoose.Types.ObjectId.isValid(categoryIdOrName)) {
+    query.categoryRef = categoryIdOrName;
+  } else {
+    query.category = categoryIdOrName;
+  }
+
   if (subCategory) {
-    query.subCategory = subCategory;
+    if (mongoose.Types.ObjectId.isValid(subCategory)) {
+      query.subCategoryRef = subCategory;
+    } else {
+      query.subCategory = subCategory;
+    }
   }
 
   return this.find(query)
+    .populate('categoryRef subCategoryRef', 'name slug')
     .limit(limit)
     .skip(skip)
     .sort(sortBy);
@@ -617,7 +655,14 @@ productSchema.statics.searchProducts = function(query, options = {}) {
     filters.$text = { $search: query };
   }
 
-  if (category) filters.category = category;
+  if (category) {
+    if (mongoose.Types.ObjectId.isValid(category)) {
+      filters.categoryRef = category;
+    } else {
+      filters.category = category;
+    }
+  }
+  
   if (anime) filters['anime.name'] = new RegExp(anime, 'i');
   
   if (minPrice !== undefined || maxPrice !== undefined) {
@@ -627,6 +672,7 @@ productSchema.statics.searchProducts = function(query, options = {}) {
   }
 
   return this.find(filters)
+    .populate('categoryRef subCategoryRef', 'name slug')
     .sort(sortBy)
     .limit(limit)
     .skip(skip);
@@ -640,6 +686,7 @@ productSchema.statics.getRelatedProducts = async function(productId, limit = 6) 
   return this.find({
     _id: { $ne: productId },
     $or: [
+      { categoryRef: product.categoryRef },
       { category: product.category },
       { 'anime.name': product.anime.name },
       { tags: { $in: product.tags } }
@@ -647,6 +694,7 @@ productSchema.statics.getRelatedProducts = async function(productId, limit = 6) 
     isAvailable: true,
     status: 'published'
   })
+  .populate('categoryRef subCategoryRef', 'name slug')
   .limit(limit)
   .sort('-rating.average');
 };
@@ -656,6 +704,7 @@ productSchema.statics.getLowStockProducts = function(threshold = 10) {
     stock: { $lte: threshold, $gt: 0 },
     status: 'published'
   })
+  .populate('categoryRef subCategoryRef', 'name slug')
   .sort('stock');
 };
 
@@ -666,6 +715,7 @@ productSchema.statics.getOutOfStockProducts = function() {
       { status: 'out_of_stock' }
     ]
   })
+  .populate('categoryRef subCategoryRef', 'name slug')
   .sort('-updatedAt');
 };
 

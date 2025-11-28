@@ -40,6 +40,16 @@ export default function SingleProductPage() {
 
   // ===== HELPER FUNCTIONS =====
 
+  // Format price in INR
+  const formatINR = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   // Check if user is authenticated
   const isAuthenticated = () => {
     return authService.isAuthenticated();
@@ -91,6 +101,52 @@ export default function SingleProductPage() {
     if (product.image) return [product.image];
 
     return ["/images/placeholder-product.jpg"];
+  };
+
+  // Calculate discount percentage
+  const calculateDiscount = (price, salePrice) => {
+    if (!salePrice || salePrice >= price) return 0;
+    return Math.round(((price - salePrice) / price) * 100);
+  };
+
+  // Format dimensions safely
+  const formatDimensions = (dimensions) => {
+    if (!dimensions || typeof dimensions !== 'object') return null;
+    
+    const { length, width, height, unit } = dimensions;
+    
+    if (!length && !width && !height) return null;
+    
+    return `${length || 0} × ${width || 0} × ${height || 0} ${unit || 'cm'}`;
+  };
+
+  // Format specifications value safely
+  const formatSpecValue = (value) => {
+    // Handle null or undefined
+    if (value === null || value === undefined) return 'N/A';
+    
+    // Handle arrays
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+    
+    // Handle objects (like dimensions)
+    if (typeof value === 'object') {
+      // Check if it's a dimensions object
+      if (value.length !== undefined || value.width !== undefined || value.height !== undefined) {
+        const formatted = formatDimensions(value);
+        return formatted || 'N/A';
+      }
+      // For other objects, try to stringify
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return 'N/A';
+      }
+    }
+    
+    // Handle primitives (string, number, boolean)
+    return String(value);
   };
 
   // ===== END HELPER FUNCTIONS =====
@@ -262,11 +318,10 @@ export default function SingleProductPage() {
     setIsAddingToCart(true);
 
     try {
-
-       const result = await addToCart(userId, {
+      const result = await addToCart(userId, {
         productId: product._id,
         name: product.name,
-        price: product.price,
+        price: product.salePrice || product.price,
         quantity: quantity,
         image: product?.images[0]?.url,
       });
@@ -337,10 +392,10 @@ export default function SingleProductPage() {
         color: "#fff",
       },
     });
-    // TODO: Integrate with your wishlist API/system
   };
 
   const productImages = getProductImages();
+  const discountPercent = calculateDiscount(product?.price, product?.salePrice);
 
   // Loading State
   if (loading) {
@@ -698,29 +753,31 @@ export default function SingleProductPage() {
                     fontWeight: 300,
                   }}
                 >
-                  ${product.salePrice || product.price}
+                  {formatINR(product.salePrice || product.price)}
                 </span>
                 {product.salePrice && product.price > product.salePrice && (
-                  <span
-                    style={{
-                      fontSize: "1.5rem",
-                      color: "rgba(0,0,0,0.4)",
-                      textDecoration: "line-through",
-                    }}
-                  >
-                    ${product.price}
-                  </span>
-                )}
-                {product.discount && (
-                  <span
-                    style={{
-                      fontSize: "1rem",
-                      color: "#ef4444",
-                      fontWeight: 500,
-                    }}
-                  >
-                    Save {product.discount}%
-                  </span>
+                  <>
+                    <span
+                      style={{
+                        fontSize: "1.5rem",
+                        color: "rgba(0,0,0,0.4)",
+                        textDecoration: "line-through",
+                      }}
+                    >
+                      {formatINR(product.price)}
+                    </span>
+                    {discountPercent > 0 && (
+                      <span
+                        style={{
+                          fontSize: "1rem",
+                          color: "#ef4444",
+                          fontWeight: 500,
+                        }}
+                      >
+                        Save {discountPercent}%
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -1087,27 +1144,38 @@ export default function SingleProductPage() {
                       }}
                     >
                       {Object.entries(product.specifications).map(
-                        ([key, value]) => (
-                          <div
-                            key={key}
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              padding: "1rem 1.5rem",
-                              background: "white",
-                            }}
-                          >
-                            <span
+                        ([key, value]) => {
+                          const formattedValue = formatSpecValue(value);
+                          
+                          // Skip if value is null or N/A after formatting
+                          if (!formattedValue || formattedValue === 'N/A') {
+                            return null;
+                          }
+
+                          return (
+                            <div
+                              key={key}
                               style={{
-                                color: "rgba(0,0,0,0.6)",
-                                textTransform: "capitalize",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                padding: "1rem 1.5rem",
+                                background: "white",
                               }}
                             >
-                              {key.replace(/([A-Z])/g, " $1").trim()}
-                            </span>
-                            <span style={{ fontWeight: 500 }}>{value}</span>
-                          </div>
-                        )
+                              <span
+                                style={{
+                                  color: "rgba(0,0,0,0.6)",
+                                  textTransform: "capitalize",
+                                }}
+                              >
+                                {key.replace(/([A-Z])/g, " $1").trim()}
+                              </span>
+                              <span style={{ fontWeight: 500 }}>
+                                {formattedValue}
+                              </span>
+                            </div>
+                          );
+                        }
                       )}
                     </div>
                   ) : (
@@ -1237,7 +1305,6 @@ export default function SingleProductPage() {
               }}
             >
               {featuredProducts.map((featuredProduct, i) => {
-                
                 const getFeaturedImage = () => {
                   if (
                     featuredProduct.images &&
@@ -1358,10 +1425,9 @@ export default function SingleProductPage() {
                             fontWeight: 300,
                           }}
                         >
-                          ${featuredProduct.salePrice || featuredProduct.price}
+                          {formatINR(featuredProduct.salePrice || featuredProduct.price)}
                         </span>
 
-                        {/* Only show rating if product has reviews */}
                         {getReviewCount(featuredProduct) > 0 && (
                           <div style={{ display: "flex", gap: "0.25rem" }}>
                             {[...Array(5)].map((_, i) => (

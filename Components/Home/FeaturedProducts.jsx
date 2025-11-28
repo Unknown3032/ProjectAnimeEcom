@@ -23,6 +23,16 @@ export default function FeaturedProducts() {
   const [loadingStates, setLoadingStates] = useState({});
   const [error, setError] = useState(null);
 
+  // Format price in INR
+  const formatINR = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   // Helper function to get image URL with comprehensive error handling
   const getImageUrl = (imagePath) => {
     try {
@@ -249,6 +259,12 @@ export default function FeaturedProducts() {
     // Get the image URL safely
     const imageUrl = getImageUrl(product?.image);
 
+    // Calculate discount percentage
+    const hasDiscount = product?.originalPrice && product?.originalPrice > product?.price;
+    const discountPercent = hasDiscount
+      ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+      : 0;
+
     const handleMouseEnter = () => {
       if (isOutOfStock) return;
 
@@ -395,10 +411,10 @@ export default function FeaturedProducts() {
             </div>
           )}
 
-          {/* Discount */}
-          {product?.discount > 0 && !isOutOfStock && (
-            <div className="absolute top-16 right-4 px-3 py-1.5 bg-white text-black text-xs font-bold z-10">
-              -{product.discount}%
+          {/* Discount - Updated to show calculated percentage */}
+          {hasDiscount && !isOutOfStock && (
+            <div className="absolute top-4 left-4 px-3 py-1.5 bg-red-600 text-white text-xs font-bold z-10">
+              -{discountPercent}%
             </div>
           )}
         </div>
@@ -422,14 +438,14 @@ export default function FeaturedProducts() {
             {truncateTitle(product?.name, 6)}
           </h3>
 
-          {/* Price */}
+          {/* Price - Updated to INR */}
           <div className="flex items-baseline gap-3 mb-4">
             <span className="text-2xl sm:text-3xl font-light">
-              ${product?.price || "0.00"}
+              {formatINR(product?.price || 0)}
             </span>
-            {product?.originalPrice && (
+            {product?.originalPrice && product.originalPrice > product.price && (
               <span className="text-base text-black/40 line-through">
-                ${product.originalPrice}
+                {formatINR(product.originalPrice)}
               </span>
             )}
           </div>

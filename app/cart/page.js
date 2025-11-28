@@ -19,6 +19,16 @@ export default function CartPage() {
   const [deletingItems, setDeletingItems] = useState(new Set());
   const [hasAnimated, setHasAnimated] = useState(false);
 
+  // Format price in INR
+  const formatINR = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   // Page entrance animation
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -208,7 +218,7 @@ export default function CartPage() {
   }
 
   const handleCheckout = () => {
-    router.push('/checkoutpage');
+    router.push('/checkout');
   };
 
   return (
@@ -267,8 +277,9 @@ export default function CartPage() {
                       <h3 className="text-lg sm:text-xl md:text-2xl font-light text-neutral-900 mb-1 sm:mb-2 tracking-tight">
                         {item.product.name}
                       </h3>
+                      {/* Updated Price to INR */}
                       <p className="text-neutral-500 font-light tracking-wide text-sm sm:text-base">
-                        ${item.price.toFixed(2)}
+                        {formatINR(item.price)}
                       </p>
                     </div>
 
@@ -302,10 +313,11 @@ export default function CartPage() {
                         </div>
                       </div>
 
-                      {/* Price and Remove */}
+                      {/* Price and Remove - Mobile */}
                       <div className="flex items-center justify-between pt-4 border-t border-neutral-200">
+                        {/* Updated Item Total to INR */}
                         <p className="text-xl font-light text-neutral-900">
-                          ${(item.price * item.quantity).toFixed(2)}
+                          {formatINR(item.price * item.quantity)}
                         </p>
                         <button
                           onClick={() => handleRemove(item.product._id, index)}
@@ -347,10 +359,11 @@ export default function CartPage() {
                         </button>
                       </div>
 
-                      {/* Item Total and Remove */}
+                      {/* Item Total and Remove - Desktop */}
                       <div className="flex items-center gap-4 md:gap-6">
+                        {/* Updated Item Total to INR */}
                         <p className="text-lg md:text-xl lg:text-2xl font-light text-neutral-900">
-                          ${(item.price * item.quantity).toFixed(2)}
+                          {formatINR(item.price * item.quantity)}
                         </p>
                         <button
                           onClick={() => handleRemove(item.product._id, index)}
@@ -396,8 +409,9 @@ export default function CartPage() {
                   <span className="text-neutral-600 font-light tracking-wide text-sm sm:text-base">
                     Subtotal
                   </span>
+                  {/* Updated Subtotal to INR */}
                   <span className="text-neutral-900 font-light text-base sm:text-lg">
-                    ${getCartTotal().toFixed(2)}
+                    {formatINR(getCartTotal())}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -414,8 +428,9 @@ export default function CartPage() {
                 <span className="text-lg sm:text-xl font-light text-neutral-900 tracking-tight">
                   Total
                 </span>
+                {/* Updated Total to INR */}
                 <span className="text-2xl sm:text-3xl font-light text-neutral-900">
-                  ${getCartTotal().toFixed(2)}
+                  {formatINR(getCartTotal())}
                 </span>
               </div>
 
