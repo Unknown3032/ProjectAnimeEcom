@@ -17,28 +17,28 @@ export default function HeroSlider() {
       title: 'Posters',
       collection: 'Anime Poster',
       tagline: 'gifts for ninja souls',
-      image: 'https://messages-prod.27c852f3500f38c1e7786e2c9ff9e48f.r2.cloudflarestorage.com/e930c145-fae8-4a94-9fa4-9470a455341a/1764338457302-019acac3-c2ce-778e-8305-b5e347a97584.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=c774f9d56a46165f86a9757e83c2bbc3%2F20251128%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251128T140057Z&X-Amz-Expires=3600&X-Amz-Signature=b25f5835054db860353aba0cb2bbcad100fd4ba4353f99375596c321ee519ef5&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject',
+      image: 'banner1.jpeg',
     },
     {
       id: 2,
       title: 'Keychains',
       collection: 'grand line treasures',
       tagline: 'treasures for pirates',
-      image: 'https://messages-prod.27c852f3500f38c1e7786e2c9ff9e48f.r2.cloudflarestorage.com/e930c145-fae8-4a94-9fa4-9470a455341a/1764338849395-019acac9-ffae-7df4-90be-b3f05bc558e9.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=c774f9d56a46165f86a9757e83c2bbc3%2F20251128%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251128T140729Z&X-Amz-Expires=3600&X-Amz-Signature=40407a4e9d306cdd3b94305efeb7ba4a1decbe1bbb11ccda9fbcabc6b279f9e5&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject',
+      image: 'https://i.pinimg.com/1200x/9a/cc/47/9acc47cbfe95af0028c24d6e1a3094cf.jpg',
     },
     {
       id: 3,
       title: 'Mugs',
       collection: 'Best Acrylic Mugs',
       tagline: 'gear for warriors',
-      image: 'https://messages-prod.27c852f3500f38c1e7786e2c9ff9e48f.r2.cloudflarestorage.com/e930c145-fae8-4a94-9fa4-9470a455341a/1764339216594-019acacf-7c2a-727e-a469-0eb231c90320.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=c774f9d56a46165f86a9757e83c2bbc3%2F20251128%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251128T141336Z&X-Amz-Expires=3600&X-Amz-Signature=9a5ab9d97c4c8702167c968d84e9804c7f5ef3da38e8278c53b724ffe7d585b8&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject',
+      image: 'https://i.pinimg.com/736x/92/98/32/929832617c0ce7bc9d3986d8c7b8ff27.jpg',
     },
     {
       id: 4,
       title: 'Anime Products',
       collection: 'plus ultra collection',
       tagline: 'gifts for heroes',
-      image: 'https://messages-prod.27c852f3500f38c1e7786e2c9ff9e48f.r2.cloudflarestorage.com/e930c145-fae8-4a94-9fa4-9470a455341a/1764340491650-019acae3-19de-7541-bd7e-f453ed6b6c57.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=c774f9d56a46165f86a9757e83c2bbc3%2F20251128%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20251128T143451Z&X-Amz-Expires=3600&X-Amz-Signature=c42c461a10a663d8433b81dddd2c259005b6c59cd1e24707041cbc23846ae066&X-Amz-SignedHeaders=host&x-amz-checksum-mode=ENABLED&x-id=GetObject',
+      image: 'https://i.pinimg.com/736x/cf/d5/91/cfd591229a37e015cd540c4f991cc330.jpg',
     },
   ];
 

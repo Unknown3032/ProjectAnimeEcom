@@ -218,7 +218,7 @@ export default function CartPage() {
   }
 
   const handleCheckout = () => {
-    router.push('/checkout');
+    router.push('/checkoutpage');
   };
 
   return (
