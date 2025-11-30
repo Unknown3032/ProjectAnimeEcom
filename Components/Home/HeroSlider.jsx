@@ -24,14 +24,14 @@ export default function HeroSlider() {
       title: 'Keychains',
       collection: 'grand line treasures',
       tagline: 'treasures for pirates',
-      image: 'https://i.pinimg.com/1200x/9a/cc/47/9acc47cbfe95af0028c24d6e1a3094cf.jpg',
+      image: 'banner2.png',
     },
     {
       id: 3,
       title: 'Mugs',
       collection: 'Best Acrylic Mugs',
       tagline: 'gear for warriors',
-      image: 'https://i.pinimg.com/736x/92/98/32/929832617c0ce7bc9d3986d8c7b8ff27.jpg',
+      image: 'banner3.jpeg',
     },
     {
       id: 4,
