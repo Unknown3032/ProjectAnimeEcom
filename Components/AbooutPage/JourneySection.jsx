@@ -18,25 +18,25 @@ export default function JourneySection() {
       year: '2020',
       title: 'The Beginning',
       description: 'Started as a small project by two anime enthusiasts who wanted to create something special for the community.',
-      image: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&h=600&fit=crop&q=90',
+      image: 'https://wallpapercave.com/wp/wp9357953.jpg',
     },
     {
       year: '2021',
       title: 'First Collection',
       description: 'Launched our first curated collection featuring merchandise from top anime series, reaching 1000+ happy fans.',
-      image: 'https://images.unsplash.com/photo-1612178537253-bccd437b730e?w=800&h=600&fit=crop&q=90',
+      image: '/firstCollection.jpg',
     },
     {
       year: '2022',
       title: 'Growing Together',
       description: 'Expanded our catalog to 500+ products and partnered with official distributors to bring authentic merchandise.',
-      image: 'https://images.unsplash.com/photo-1618519764620-7403abdbdfe9?w=800&h=600&fit=crop&q=90',
+      image: 'https://wallpapercave.com/wp/wp9435429.jpg',
     },
     {
       year: '2023',
       title: 'Community First',
       description: 'Reached 50,000+ community members and introduced personalized gifting options based on user feedback.',
-      image: 'https://images.unsplash.com/photo-1578632292335-df3abbb0d586?w=800&h=600&fit=crop&q=90',
+      image: 'https://wallpapercave.com/wp/wp9435507.jpg',
     },
   ];
 
@@ -181,7 +181,7 @@ export default function JourneySection() {
                       src={milestone.image}
                       alt={milestone.title}
                       className="size-full object-cover transition-all duration-700 group-hover:scale-105"
-                      style={{ filter: 'grayscale(100%)' }}
+                      style={{ filter: 'grayscale(20%)' }}
                     />
                     <div className="absolute inset-0 border-2 border-black/10 group-hover:border-black/30 transition-colors duration-500" />
                     

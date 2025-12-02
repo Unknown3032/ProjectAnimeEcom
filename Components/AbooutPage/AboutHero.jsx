@@ -129,10 +129,10 @@ export default function AboutHero() {
               className="relative aspect-[3/4] overflow-hidden"
             >
               <img
-                src="https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800&h=1000&fit=crop&q=90"
+                src="https://wallpapercave.com/wp/wp9358039.jpg"
                 alt="About"
                 className="size-full object-cover"
-                style={{ filter: 'grayscale(100%)' }}
+                style={{ filter: 'grayscale(10%)' }}
               />
               <div className="absolute inset-0 border-2 border-black/10" />
             </div>

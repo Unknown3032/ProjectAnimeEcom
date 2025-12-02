@@ -13,12 +13,14 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
 
-  // Anime search states
+  // Anime search states - ENHANCED
   const [animeList, setAnimeList] = useState([]);
   const [animeSearch, setAnimeSearch] = useState("");
   const [loadingAnime, setLoadingAnime] = useState(false);
+  const [selectedAnime, setSelectedAnime] = useState(null);
+  const [showAnimeDropdown, setShowAnimeDropdown] = useState(false);
   
-  // Category states - UPDATED
+  // Category states
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
@@ -217,7 +219,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     { number: 5, title: "Review", icon: "✓" },
   ];
 
-  // Fetch categories from API - UPDATED
+  // Fetch categories from API
   const fetchCategories = async () => {
     try {
       setLoadingCategories(true);
@@ -233,7 +235,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         const formattedCategories = [
           { value: "", label: "Select Category", _id: "", name: "" },
           ...data.categories.map((cat) => ({
-            value: cat._id, // Use _id as value
+            value: cat._id,
             label: cat.productCount > 0 
               ? `${cat.label || cat.name} (${cat.productCount} products)` 
               : (cat.label || cat.name),
@@ -254,7 +256,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
   };
 
-  // Fetch subcategories - NEW
+  // Fetch subcategories
   const fetchSubCategories = async (categoryId) => {
     if (!categoryId) {
       setSubCategories([]);
@@ -299,13 +301,141 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
   };
 
-  // Initial data load - UPDATED
+  // ENHANCED: Search anime from YOUR backend database
+  const searchAnime = async (query) => {
+    if (!query || query.trim().length < 2) {
+      setAnimeList([]);
+      setShowAnimeDropdown(false);
+      return;
+    }
+
+    try {
+      setLoadingAnime(true);
+      
+      // Fetch from YOUR anime API
+      const response = await fetch(
+        `/api/anime?search=${encodeURIComponent(query.trim())}&limit=10&active=true`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch anime');
+      }
+      
+      const data = await response.json();
+      
+      console.log('Anime search results:', data);
+      
+      if (data.success && data.data && data.data.length > 0) {
+        const animeResults = data.data.map(anime => ({
+          _id: anime._id,
+          name: anime.name,
+          englishName: anime.englishName || anime.name,
+          japaneseName: anime.japaneseName || '',
+          image: anime.image,
+          banner: anime.banner || '',
+          genre: anime.genre || [],
+          studio: anime.studio || '',
+          releaseYear: anime.releaseYear,
+          status: anime.status,
+          rating: anime.rating,
+          description: anime.description || '',
+        }));
+        
+        setAnimeList(animeResults);
+        setShowAnimeDropdown(true);
+      } else {
+        setAnimeList([]);
+        setShowAnimeDropdown(false);
+        
+        // Show a message if no results found
+        if (query.length >= 2) {
+          toast.error('No anime found. Try a different search term.');
+        }
+      }
+    } catch (error) {
+      console.error("Error searching anime:", error);
+      setAnimeList([]);
+      setShowAnimeDropdown(false);
+      toast.error('Failed to search anime. Please try again.');
+    } finally {
+      setLoadingAnime(false);
+    }
+  };
+
+  // ENHANCED: Handle anime selection with auto-fill
+  const handleAnimeSelect = (anime) => {
+    console.log('Selected anime:', anime);
+    
+    setSelectedAnime(anime);
+    setAnimeSearch(anime.name);
+    setShowAnimeDropdown(false);
+    
+    // Auto-fill form data with anime information
+    setFormData((prev) => ({
+      ...prev,
+      anime: {
+        name: anime.name,
+        series: anime.name, // Use anime name as series
+        character: prev.anime?.character || '', // Keep existing character if any
+        season: prev.anime?.season || '',
+        episode: prev.anime?.episode || '',
+      },
+      // Auto-suggest tags from anime genres
+      tags: Array.from(new Set([
+        ...prev.tags,
+        'anime',
+        anime.name.toLowerCase().replace(/\s+/g, '-'),
+        ...(anime.genre || []).map(g => g.toLowerCase()),
+      ])),
+      // Optionally set age rating based on anime
+      ageRating: prev.ageRating || 'All Ages',
+    }));
+    
+    // Clear anime error if exists
+    if (errors.anime) {
+      setErrors((prev) => ({ ...prev, anime: "" }));
+    }
+    
+    toast.success(`Selected: ${anime.name}`);
+  };
+
+  // ENHANCED: Debounced search with better UX
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (animeSearch.length >= 2) {
+        searchAnime(animeSearch);
+      } else {
+        setAnimeList([]);
+        setShowAnimeDropdown(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [animeSearch]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.anime-search-container')) {
+        setShowAnimeDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Initial data load
   useEffect(() => {
     fetchCategories();
     
     // If editing, set anime search to existing anime name
     if (isEdit && initialData?.anime?.name) {
       setAnimeSearch(initialData.anime.name);
+      setSelectedAnime({
+        name: initialData.anime.name,
+        series: initialData.anime.series,
+      });
     }
     
     // If editing, set selected category and subcategory IDs
@@ -322,7 +452,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
   }, []);
 
-  // Fetch subcategories when category changes - NEW
+  // Fetch subcategories when category changes
   useEffect(() => {
     if (selectedCategoryId) {
       fetchSubCategories(selectedCategoryId);
@@ -332,7 +462,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
   }, [selectedCategoryId]);
 
-  // Set initial category on edit - UPDATED
+  // Set initial category on edit
   useEffect(() => {
     if (isEdit && initialData && categories.length > 0) {
       const catId = initialData.categoryRef?._id || initialData.categoryRef;
@@ -342,7 +472,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
   }, [categories, isEdit, initialData]);
 
-  // Set initial subcategory on edit - NEW
+  // Set initial subcategory on edit
   useEffect(() => {
     if (isEdit && initialData && subCategories.length > 0) {
       const subCatId = initialData.subCategoryRef?._id || initialData.subCategoryRef;
@@ -351,55 +481,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
       }
     }
   }, [subCategories, isEdit, initialData]);
-
-  // Search anime with debounce
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (animeSearch.length >= 2) {
-        searchAnime(animeSearch);
-      } else {
-        setAnimeList([]);
-      }
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [animeSearch]);
-
-  const searchAnime = async (query) => {
-    try {
-      setLoadingAnime(true);
-      const response = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=10`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        const animeResults = data.data?.map(anime => ({
-          _id: anime.mal_id,
-          name: anime.title,
-          image: anime.images?.jpg?.image_url || anime.images?.jpg?.small_image_url,
-        })) || [];
-        setAnimeList(animeResults);
-      } else {
-        setAnimeList([]);
-      }
-    } catch (error) {
-      console.error("Error searching anime:", error);
-      setAnimeList([]);
-    } finally {
-      setLoadingAnime(false);
-    }
-  };
-
-  const handleAnimeSelect = (anime) => {
-    setFormData((prev) => ({
-      ...prev,
-      anime: {
-        ...prev.anime,
-        name: anime.name,
-      },
-    }));
-    setAnimeSearch(anime.name);
-    setAnimeList([]);
-  };
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -432,41 +513,35 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
   }, [formData.name, formData.category, isEdit]);
 
-  // Handle category change - NEW
+  // Handle category change
   const handleCategoryChange = (e) => {
     const categoryId = e.target.value;
     setSelectedCategoryId(categoryId);
     
-    // Find the category name
     const selectedCategory = categories.find(cat => cat._id === categoryId);
     
-    // Update form data with both ID and name
     setFormData((prev) => ({
       ...prev,
       categoryRef: categoryId,
       category: selectedCategory?.name || "",
-      subCategoryRef: null, // Reset subcategory when category changes
+      subCategoryRef: null,
       subCategory: ""
     }));
     
-    // Reset subcategory selection
     setSelectedSubCategoryId("");
     
-    // Clear error for this field
     if (errors.category) {
       setErrors((prev) => ({ ...prev, category: "" }));
     }
   };
 
-  // Handle subcategory change - NEW
+  // Handle subcategory change
   const handleSubCategoryChange = (e) => {
     const subCategoryId = e.target.value;
     setSelectedSubCategoryId(subCategoryId);
     
-    // Find the subcategory name
     const selectedSubCategory = subCategories.find(subCat => subCat._id === subCategoryId);
     
-    // Update form data with both ID and name
     setFormData((prev) => ({
       ...prev,
       subCategoryRef: subCategoryId || null,
@@ -500,7 +575,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
       }));
     }
 
-    // Clear error for this field
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -615,7 +689,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
       }
     }
 
-    // Additional validation for category
     if (!selectedCategoryId) {
       toast.error("Please select a category");
       setCurrentStep(1);
@@ -656,11 +729,10 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
           episode: formData.anime.episode?.trim() || '',
         },
         
-        // UPDATED - Send both categoryRef and category name
-        categoryRef: selectedCategoryId, // Send the ObjectId
-        category: formData.category, // Send the name (for backward compatibility)
-        subCategoryRef: selectedSubCategoryId || null, // Send the ObjectId or null
-        subCategory: formData.subCategory || '', // Send the name
+        categoryRef: selectedCategoryId,
+        category: formData.category,
+        subCategoryRef: selectedSubCategoryId || null,
+        subCategory: formData.subCategory || '',
         
         tags: formData.tags || [],
         
@@ -891,55 +963,162 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                     )}
                   </div>
 
-                  {/* Anime Search */}
-                  <div className="relative">
+                  {/* ENHANCED: Anime Search with Better UI */}
+                  <div className="relative anime-search-container">
                     <label className="block text-sm font-medium text-black mb-2">
                       Anime Name <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      value={animeSearch || ""}
-                      onChange={(e) => setAnimeSearch(e.target.value)}
-                      placeholder="Search anime (e.g., Naruto, One Piece)"
-                      className={`w-full px-4 py-3 bg-black/5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all ${
-                        errors.anime ? "border-red-500" : "border-black/10"
-                      }`}
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={animeSearch || ""}
+                        onChange={(e) => {
+                          setAnimeSearch(e.target.value);
+                          setShowAnimeDropdown(true);
+                        }}
+                        onFocus={() => animeList.length > 0 && setShowAnimeDropdown(true)}
+                        placeholder="Search anime from database (e.g., Naruto, One Piece)"
+                        className={`w-full px-4 py-3 pr-10 bg-black/5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all ${
+                          errors.anime ? "border-red-500" : "border-black/10"
+                        }`}
+                      />
+                      
+                      {/* Loading Spinner */}
+                      {loadingAnime && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                        </div>
+                      )}
+                      
+                      {/* Search Icon */}
+                      {!loadingAnime && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40">
+                          🔍
+                        </div>
+                      )}
+                    </div>
+                    
                     {errors.anime && (
                       <p className="text-red-500 text-xs mt-1">
                         {errors.anime}
                       </p>
                     )}
+                    
+                    {/* Selected Anime Badge */}
+                    {selectedAnime && (
+                      <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-sm">
+                        <span className="text-green-600">✓</span>
+                        <span className="font-medium text-green-700">
+                          Selected: {selectedAnime.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedAnime(null);
+                            setAnimeSearch('');
+                            setFormData(prev => ({
+                              ...prev,
+                              anime: { ...prev.anime, name: '', series: '' }
+                            }));
+                          }}
+                          className="text-green-600 hover:text-green-800 ml-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
 
-                    {/* Autocomplete Dropdown */}
-                    {animeList.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-black/10 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                    {/* ENHANCED: Autocomplete Dropdown */}
+                    {showAnimeDropdown && animeList.length > 0 && (
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-black/10 rounded-xl shadow-2xl max-h-96 overflow-y-auto">
+                        <div className="p-2 bg-black/5 border-b border-black/10">
+                          <p className="text-xs text-black/60 font-medium">
+                            {animeList.length} anime found
+                          </p>
+                        </div>
                         {animeList.map((anime) => (
                           <div
                             key={anime._id}
                             onClick={() => handleAnimeSelect(anime)}
-                            className="px-4 py-3 hover:bg-black/5 cursor-pointer flex items-center gap-3 transition-colors"
+                            className="px-4 py-3 hover:bg-black/5 cursor-pointer flex items-center gap-3 transition-colors border-b border-black/5 last:border-0"
                           >
                             {anime.image && (
                               <img
                                 src={anime.image}
                                 alt={anime.name}
-                                className="w-12 h-12 object-cover rounded-lg"
+                                className="w-16 h-20 object-cover rounded-lg flex-shrink-0"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
                               />
                             )}
-                            <span className="font-medium">{anime.name}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-black truncate">
+                                {anime.name}
+                              </p>
+                              {anime.englishName && anime.englishName !== anime.name && (
+                                <p className="text-sm text-black/50 truncate">
+                                  {anime.englishName}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {anime.releaseYear && (
+                                  <span className="text-xs bg-black/10 px-2 py-0.5 rounded">
+                                    {anime.releaseYear}
+                                  </span>
+                                )}
+                                {anime.status && (
+                                  <span className={`text-xs px-2 py-0.5 rounded ${
+                                    anime.status === 'Completed' 
+                                      ? 'bg-green-100 text-green-700'
+                                      : anime.status === 'Ongoing'
+                                      ? 'bg-blue-100 text-blue-700'
+                                      : 'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    {anime.status}
+                                  </span>
+                                )}
+                                {anime.rating && (
+                                  <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
+                                    ⭐ {anime.rating}
+                                  </span>
+                                )}
+                              </div>
+                              {anime.genre && anime.genre.length > 0 && (
+                                <div className="flex gap-1 mt-1 flex-wrap">
+                                  {anime.genre.slice(0, 3).map((g, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="text-xs bg-black/5 px-1.5 py-0.5 rounded"
+                                    >
+                                      {g}
+                                    </span>
+                                  ))}
+                                  {anime.genre.length > 3 && (
+                                    <span className="text-xs text-black/40">
+                                      +{anime.genre.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
                     )}
-                    {loadingAnime && (
-                      <div className="absolute right-3 top-11">
-                        <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                    
+                    {/* No Results Message */}
+                    {!loadingAnime && animeSearch.length >= 2 && animeList.length === 0 && (
+                      <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800">
+                        <p className="font-medium">No anime found for "{animeSearch}"</p>
+                        <p className="text-xs mt-1">
+                          Try a different search term or check the spelling
+                        </p>
                       </div>
                     )}
                   </div>
 
-                  {/* Character & Series */}
+                  {/* Character & Series - Shows when anime is selected */}
                   {formData.anime?.name && (
                     <div className="grid md:grid-cols-2 gap-4 p-4 bg-black/5 rounded-xl">
                       <div>
@@ -1002,7 +1181,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                       />
                     </div>
 
-                    {/* Category - UPDATED */}
+                    {/* Category */}
                     <div>
                       <label className="block text-sm font-medium text-black mb-2">
                         Category <span className="text-red-500">*</span>
@@ -1036,7 +1215,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                     </div>
                   </div>
 
-                  {/* Subcategory - UPDATED */}
+                  {/* Subcategory */}
                   {selectedCategoryId && (
                     <div>
                       <label className="block text-sm font-medium text-black mb-2">
@@ -1692,6 +1871,10 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
             <ul className="space-y-2 text-sm text-black/60">
               <li className="flex items-start gap-2">
                 <span className="text-black mt-0.5">•</span>
+                <span>Search and select anime from your database</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-black mt-0.5">•</span>
                 <span>Use clear, high-quality product images</span>
               </li>
               <li className="flex items-start gap-2">
@@ -1709,10 +1892,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
               <li className="flex items-start gap-2">
                 <span className="text-black mt-0.5">•</span>
                 <span>Keep inventory levels updated</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-black mt-0.5">•</span>
-                <span>Include anime character and series info</span>
               </li>
             </ul>
           </div>
