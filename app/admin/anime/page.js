@@ -1,5 +1,5 @@
 // app/admin/anime/page.jsx
-import AnimeManagement from "@/components/admin/AnimeManagement";
+import AnimeManagement from "../../../Components/admin/AnimeManagement";
 
 export const metadata = {
   title: "Anime Management | Admin",

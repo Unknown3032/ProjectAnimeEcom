@@ -15,35 +15,44 @@ function EditProductPage() {
   const [product, setProduct] = useState(null);
   const [error, setError] = useState(null);
 
-  // Debug: Log the params
-  useEffect(() => {
-  }, [params]);
+  // Format currency to INR
+  const formatINR = (price) => {
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(numPrice)) return '₹0';
+    return `₹${numPrice.toLocaleString('en-IN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    })}`;
+  };
 
   useEffect(() => {
+    // Check authentication
     if (!isAuthenticated()) {
+      toast.error('Please login to continue');
       router.replace('/signin');
       return;
     }
 
     if (!isAdmin()) {
+      toast.error('Unauthorized access');
       router.replace('/');
       return;
     }
 
     setAuthorized(true);
     
-    // Check if params.id exists
-    if (!params.id) {
+    // Validate product ID
+    if (!params?.id) {
       console.error('No ID in params!');
       setError('No product ID provided');
       setLoading(false);
       return;
     }
 
-    // Handle if ID is an array (sometimes Next.js does this)
+    // Handle if ID is an array (Next.js dynamic routes)
     const productId = Array.isArray(params.id) ? params.id[0] : params.id;
 
-    if (productId) {
+    if (productId && productId !== 'undefined' && productId !== 'null') {
       fetchProduct(productId);
     } else {
       setError('Invalid product ID');
@@ -52,6 +61,7 @@ function EditProductPage() {
   }, [params, router]);
 
   const fetchProduct = async (productId) => {
+    // Validate product ID
     if (!productId || productId === 'undefined' || productId === 'null') {
       console.error('Invalid product ID:', productId);
       setError('Invalid product ID');
@@ -64,10 +74,7 @@ function EditProductPage() {
       setError(null);
 
       const url = `/api/admin/products/${productId}`;
-
       const response = await fetch(url);
-      
-
       const data = await response.json();
 
       if (!response.ok) {
@@ -84,15 +91,11 @@ function EditProductPage() {
           return;
         }
         
-        setError(data.error || 'Failed to fetch product');
-        toast.error(data.error || 'Failed to fetch product');
-        return;
+        throw new Error(data.error || 'Failed to fetch product');
       }
 
       if (!data.success || !data.product) {
-        setError('Invalid product data received');
-        toast.error('Invalid product data received');
-        return;
+        throw new Error('Invalid product data received');
       }
 
       // Transform backend data to match form structure
@@ -116,17 +119,17 @@ function EditProductPage() {
           episode: data.product.anime?.episode || '',
         },
 
-        // Pricing
-        price: data.product.price?.toString() || '',
+        // Pricing - Convert to INR
+        price: data.product.price?.toString() || '0',
         originalPrice: data.product.originalPrice?.toString() || '',
         discount: data.product.discount || 0,
-        currency: data.product.currency || 'USD',
+        currency: 'INR', // Force INR currency
 
         // Inventory
         stock: data.product.stock?.toString() || '0',
-        trackQuantity: true,
-        lowStockThreshold: '10',
-        allowBackorder: false,
+        trackQuantity: data.product.trackQuantity ?? true,
+        lowStockThreshold: data.product.lowStockThreshold?.toString() || '10',
+        allowBackorder: data.product.allowBackorder || false,
 
         // Shipping
         shipping: {
@@ -147,7 +150,7 @@ function EditProductPage() {
         licensedBy: data.product.licensedBy || '',
 
         // Organization
-        tags: data.product.tags || [],
+        tags: Array.isArray(data.product.tags) ? data.product.tags : [],
         status: data.product.status || 'draft',
         isFeatured: data.product.isFeatured || false,
         isNewArrival: data.product.isNewArrival || false,
@@ -160,10 +163,14 @@ function EditProductPage() {
         images: Array.isArray(data.product.images) 
           ? data.product.images.map((img, index) => {
               if (typeof img === 'string') {
-                return { url: img, alt: data.product.name, isPrimary: index === 0 };
+                return { url: img, alt: data.product.name || 'Product image', isPrimary: index === 0 };
               }
-              if (img.url) {
-                return { ...img, isPrimary: img.isPrimary || index === 0 };
+              if (img && img.url) {
+                return { 
+                  url: img.url,
+                  alt: img.alt || data.product.name || 'Product image',
+                  isPrimary: img.isPrimary || index === 0 
+                };
               }
               return null;
             }).filter(Boolean)
@@ -179,8 +186,12 @@ function EditProductPage() {
             height: data.product.specifications?.dimensions?.height?.toString() || '',
             unit: data.product.specifications?.dimensions?.unit || 'cm',
           },
-          careInstructions: data.product.specifications?.careInstructions || [],
-          features: data.product.specifications?.features || [],
+          careInstructions: Array.isArray(data.product.specifications?.careInstructions) 
+            ? data.product.specifications.careInstructions 
+            : [],
+          features: Array.isArray(data.product.specifications?.features) 
+            ? data.product.specifications.features 
+            : [],
         },
 
         // Availability
@@ -189,6 +200,11 @@ function EditProductPage() {
         preOrderReleaseDate: data.product.preOrderReleaseDate || '',
         isLimitedEdition: data.product.isLimitedEdition || false,
         limitedQuantity: data.product.limitedQuantity?.toString() || '',
+
+        // Additional fields
+        metaTitle: data.product.metaTitle || '',
+        metaDescription: data.product.metaDescription || '',
+        metaKeywords: Array.isArray(data.product.metaKeywords) ? data.product.metaKeywords : [],
       };
 
       setProduct(transformedProduct);
@@ -196,8 +212,9 @@ function EditProductPage() {
       
     } catch (error) {
       console.error('Error fetching product:', error);
-      setError(error.message || 'Failed to load product');
-      toast.error(error.message || 'Failed to load product');
+      const errorMessage = error.message || 'Failed to load product';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -205,7 +222,10 @@ function EditProductPage() {
 
   const deleteProduct = async () => {
     const productId = Array.isArray(params.id) ? params.id[0] : params.id;
-    if (!productId) return;
+    if (!productId) {
+      toast.error('Invalid product ID');
+      return;
+    }
 
     const loadingToast = toast.loading('Deleting product...');
     
@@ -240,8 +260,10 @@ function EditProductPage() {
         <div className="text-center">
           <div className="w-12 h-12 border-2 border-black/20 border-t-black rounded-full animate-spin mx-auto mb-4" />
           <p className="text-sm text-black/40 tracking-wider uppercase">Loading product...</p>
-          {params.id && (
-            <p className="text-xs text-black/20 mt-2">ID: {Array.isArray(params.id) ? params.id[0] : params.id}</p>
+          {params?.id && (
+            <p className="text-xs text-black/20 mt-2">
+              ID: {Array.isArray(params.id) ? params.id[0] : params.id}
+            </p>
           )}
         </div>
       </div>
@@ -256,10 +278,12 @@ function EditProductPage() {
           <div className="text-6xl mb-4">❌</div>
           <h2 className="text-2xl font-bold text-black mb-2">Error Loading Product</h2>
           <p className="text-black/60 mb-2">{error}</p>
-          <p className="text-xs text-black/40 mb-6">
-            ID: {Array.isArray(params.id) ? params.id[0] : params.id || 'No ID'}
-          </p>
-          <div className="flex gap-3 justify-center">
+          {params?.id && (
+            <p className="text-xs text-black/40 mb-6">
+              ID: {Array.isArray(params.id) ? params.id[0] : params.id}
+            </p>
+          )}
+          <div className="flex gap-3 justify-center flex-wrap">
             <button
               onClick={() => router.push('/admin/products')}
               className="px-6 py-3 bg-black text-white rounded-xl font-medium hover:bg-black/90 transition-all"
@@ -288,7 +312,13 @@ function EditProductPage() {
         <div className="text-center">
           <div className="text-6xl mb-4">🔒</div>
           <h2 className="text-2xl font-bold text-black mb-2">Unauthorized</h2>
-          <p className="text-black/60">You don't have permission to access this page</p>
+          <p className="text-black/60 mb-6">You don't have permission to access this page</p>
+          <button
+            onClick={() => router.push('/admin/products')}
+            className="px-6 py-3 bg-black text-white rounded-xl font-medium hover:bg-black/90 transition-all"
+          >
+            Back to Products
+          </button>
         </div>
       </div>
     );
@@ -320,7 +350,7 @@ function EditProductPage() {
       <main className="p-4 md:p-6 lg:p-8">
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
-          <div>
+          <div className="flex-1">
             <button
               onClick={() => router.push('/admin/products')}
               className="inline-flex items-center gap-2 text-sm text-black/60 hover:text-black mb-3 group"
@@ -334,7 +364,9 @@ function EditProductPage() {
             <p className="text-sm md:text-base text-black/50">
               Update product information for {product.name}
             </p>
-            <div className="flex items-center gap-2 mt-2 flex-wrap">
+            
+            {/* Product Meta Information */}
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
               <span className="px-3 py-1 bg-black/10 rounded-full text-xs font-medium text-black">
                 SKU: {product.sku}
               </span>
@@ -352,10 +384,26 @@ function EditProductPage() {
                   ⭐ Featured
                 </span>
               )}
+              {product.isNewArrival && (
+                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                  🆕 New Arrival
+                </span>
+              )}
+              {product.isBestseller && (
+                <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                  🔥 Bestseller
+                </span>
+              )}
+              {product.price && (
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                  {formatINR(product.price)}
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => window.open(`/product/${product._id}`, '_blank')}
               className="px-4 py-2 bg-black/5 text-black rounded-xl font-medium hover:bg-black/10 transition-all inline-flex items-center gap-2"
@@ -366,7 +414,7 @@ function EditProductPage() {
             </button>
             <button
               onClick={() => {
-                if (confirm(`Are you sure you want to delete "${product.name}"? This action cannot be undone.`)) {
+                if (confirm(`Are you sure you want to delete "${product.name}"?\n\nThis action cannot be undone and will permanently remove this product from your store.`)) {
                   deleteProduct();
                 }
               }}

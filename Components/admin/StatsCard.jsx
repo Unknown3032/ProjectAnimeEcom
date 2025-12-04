@@ -20,6 +20,14 @@ export default function StatsCard({ stat, index }) {
     );
   }, [index]);
 
+  // Function to convert currency symbol from $ to ₹
+  const formatValue = (value) => {
+    if (typeof value === 'string') {
+      return value.replace(/\$/g, '₹');
+    }
+    return value;
+  };
+
   return (
     <div 
       ref={cardRef}
@@ -38,7 +46,7 @@ export default function StatsCard({ stat, index }) {
         </span>
       </div>
       <div className="text-4xl font-extralight group-hover:scale-105 transition-transform">
-        {stat.value}
+        {formatValue(stat.value)}
       </div>
     </div>
   );

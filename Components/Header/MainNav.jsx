@@ -211,7 +211,7 @@ export default function Header() {
                   <>
                     {/* User Profile */}
                     <Link
-                      href={`/${isAdmin()?"admin/dashboard":"myaccount"}`}
+                      href={`/${isAdmin()?"admin/dashboard":"account"}`}
                       className="p-2 hover:bg-black/5 rounded-full transition-colors group relative"
                       aria-label="Profile"
                       title={user?.firstName || "Profile"}
@@ -328,7 +328,7 @@ export default function Header() {
                 href={`/${isAdmin()?"admin/dashboard":"account"}`}
                 className="mobile-link block text-2xl sm:text-3xl font-light py-3 sm:py-4 border-b border-black/10 transition-colors text-black/60"
               >
-                {isAdmin()?"Dashboard":"Myaccount"}
+                {isAdmin()?"Dashboard":"account"}
               </Link>
             )}
           </nav>

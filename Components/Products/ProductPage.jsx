@@ -109,50 +109,6 @@ export default function SingleProductPage() {
     return Math.round(((price - salePrice) / price) * 100);
   };
 
-  // Format dimensions safely
-  const formatDimensions = (dimensions) => {
-    if (!dimensions || typeof dimensions !== "object") return null;
-
-    const { length, width, height, unit } = dimensions;
-
-    if (!length && !width && !height) return null;
-
-    return `${length || 0} × ${width || 0} × ${height || 0} ${unit || "cm"}`;
-  };
-
-  // Format specifications value safely
-  const formatSpecValue = (value) => {
-    // Handle null or undefined
-    if (value === null || value === undefined) return "N/A";
-
-    // Handle arrays
-    if (Array.isArray(value)) {
-      return value.join(", ");
-    }
-
-    // Handle objects (like dimensions)
-    if (typeof value === "object") {
-      // Check if it's a dimensions object
-      if (
-        value.length !== undefined ||
-        value.width !== undefined ||
-        value.height !== undefined
-      ) {
-        const formatted = formatDimensions(value);
-        return formatted || "N/A";
-      }
-      // For other objects, try to stringify
-      try {
-        return JSON.stringify(value);
-      } catch {
-        return "N/A";
-      }
-    }
-
-    // Handle primitives (string, number, boolean)
-    return String(value);
-  };
-
   // ===== END HELPER FUNCTIONS =====
 
   // Track product view
@@ -265,7 +221,6 @@ export default function SingleProductPage() {
   };
 
   const handleAddToCart = async () => {
-    // Check authentication
     if (!isAuthenticated()) {
       toast.error("Please login to add items to cart", {
         duration: 3000,
@@ -294,7 +249,6 @@ export default function SingleProductPage() {
       return;
     }
 
-    // Check stock
     if (!product.inStock || product.stock <= 0) {
       toast.error("Product is out of stock", {
         duration: 3000,
@@ -343,10 +297,8 @@ export default function SingleProductPage() {
           },
         });
 
-        // Reset quantity after successful add
         setQuantity(1);
 
-        // Trigger cart update event
         window.dispatchEvent(
           new CustomEvent("cartUpdated", {
             detail: result.data,
@@ -371,31 +323,6 @@ export default function SingleProductPage() {
     } finally {
       setIsAddingToCart(false);
     }
-  };
-
-  const handleAddToWishlist = () => {
-    if (!isAuthenticated()) {
-      toast.error("Please login to add items to wishlist", {
-        duration: 3000,
-        icon: "🔒",
-        style: {
-          background: "#000",
-          color: "#fff",
-        },
-      });
-      setTimeout(() => {
-        router.push("/signin");
-      }, 1500);
-      return;
-    }
-
-    toast("Wishlist feature coming soon!", {
-      icon: "❤️",
-      style: {
-        background: "#000",
-        color: "#fff",
-      },
-    });
   };
 
   const productImages = getProductImages();
@@ -705,7 +632,7 @@ export default function SingleProductPage() {
                 {product.name}
               </h1>
 
-              {/* Rating - Only show if has reviews */}
+              {/* Rating */}
               {getReviewCount(product) > 0 && (
                 <div
                   style={{
@@ -739,6 +666,29 @@ export default function SingleProductPage() {
                     {getRating(product.rating).toFixed(1)} (
                     {getReviewCount(product)} reviews)
                   </span>
+                </div>
+              )}
+
+              {/* Short Description */}
+              {product.shortDescription && (
+                <div
+                  style={{
+                    padding: "1.5rem",
+                    background: "#f5f5f5",
+                    borderLeft: "4px solid black",
+                    marginBottom: "2rem",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "1rem",
+                      lineHeight: 1.7,
+                      color: "rgba(0,0,0,0.7)",
+                      margin: 0,
+                    }}
+                  >
+                    {product.shortDescription}
+                  </p>
                 </div>
               )}
 
@@ -785,18 +735,6 @@ export default function SingleProductPage() {
                 )}
               </div>
 
-              {/* Description */}
-              <p
-                style={{
-                  fontSize: "1rem",
-                  lineHeight: 1.8,
-                  color: "rgba(0,0,0,0.7)",
-                  marginBottom: "2rem",
-                }}
-              >
-                {product.description || product.shortDescription}
-              </p>
-
               {/* Stock Status */}
               <div
                 style={{
@@ -839,16 +777,6 @@ export default function SingleProductPage() {
                     }}
                   >
                     Quantity
-                    {getCartCount() > 0 && (
-                      <span
-                        style={{
-                          marginLeft: "0.5rem",
-                          color: "rgba(0,0,0,0.4)",
-                        }}
-                      >
-                        ({getCartCount()} total in cart)
-                      </span>
-                    )}
                   </label>
                   <div
                     style={{
@@ -972,8 +900,6 @@ export default function SingleProductPage() {
                         ? "pointer"
                         : "not-allowed",
                     transition: "all 300ms ease",
-                    position: "relative",
-                    overflow: "hidden",
                   }}
                   onMouseEnter={(e) => {
                     if (product.inStock && !isAddingToCart) {
@@ -992,36 +918,6 @@ export default function SingleProductPage() {
                     ? "Add to Cart"
                     : "Out of Stock"}
                 </button>
-
-                {/* to do create an functional wishlist  */}
-                {/* <button
-                  onClick={handleAddToWishlist}
-                  style={{
-                    width: "100%",
-                    padding: "1.25rem",
-                    fontSize: "0.875rem",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.15em",
-                    fontWeight: 500,
-                    background: "white",
-                    color: "black",
-                    border: "2px solid black",
-                    cursor: "pointer",
-                    transition: "all 300ms ease",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "black";
-                    e.currentTarget.style.color = "white";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "white";
-                    e.currentTarget.style.color = "black";
-                  }}
-                >
-                  Add to Wishlist
-                </button> */}
               </div>
 
               {/* Product Meta */}
@@ -1091,7 +987,7 @@ export default function SingleProductPage() {
                 flexWrap: "wrap",
               }}
             >
-              {["description", "specifications", "features"].map((tab) => (
+              {["description", "features"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -1119,7 +1015,7 @@ export default function SingleProductPage() {
             {/* Tab Content */}
             <div>
               {activeTab === "description" && (
-                <div style={{ maxWidth: "800px" }}>
+                <div>
                   <p
                     style={{
                       fontSize: "1.125rem",
@@ -1136,64 +1032,9 @@ export default function SingleProductPage() {
                 </div>
               )}
 
-              {activeTab === "specifications" && (
-                <div style={{ maxWidth: "600px" }}>
-                  {product.specifications &&
-                  Object.keys(product.specifications).length > 0 ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "1px",
-                        background: "rgba(0,0,0,0.1)",
-                      }}
-                    >
-                      {Object.entries(product.specifications).map(
-                        ([key, value]) => {
-                          const formattedValue = formatSpecValue(value);
-
-                          // Skip if value is null or N/A after formatting
-                          if (!formattedValue || formattedValue === "N/A") {
-                            return null;
-                          }
-
-                          return (
-                            <div
-                              key={key}
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                padding: "1rem 1.5rem",
-                                background: "white",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  color: "rgba(0,0,0,0.6)",
-                                  textTransform: "capitalize",
-                                }}
-                              >
-                                {key.replace(/([A-Z])/g, " $1").trim()}
-                              </span>
-                              <span style={{ fontWeight: 500 }}>
-                                {formattedValue}
-                              </span>
-                            </div>
-                          );
-                        }
-                      )}
-                    </div>
-                  ) : (
-                    <p style={{ color: "rgba(0,0,0,0.6)" }}>
-                      No specifications available
-                    </p>
-                  )}
-                </div>
-              )}
-
               {activeTab === "features" && (
-                <div style={{ maxWidth: "800px" }}>
-                  {product.features && product.features.length > 0 ? (
+                <div>
+                  {product.tags && product.tags.length > 0 ? (
                     <ul
                       style={{
                         listStyle: "none",
@@ -1203,13 +1044,16 @@ export default function SingleProductPage() {
                         gap: "1rem",
                       }}
                     >
-                      {product.features.map((feature, index) => (
+                      {product.tags.map((tag, index) => (
                         <li
                           key={index}
                           style={{
                             display: "flex",
                             alignItems: "flex-start",
                             gap: "1rem",
+                            padding: "1rem 1.5rem",
+                            background: "white",
+                            border: "1px solid rgba(0,0,0,0.1)",
                           }}
                         >
                           <div
@@ -1240,8 +1084,14 @@ export default function SingleProductPage() {
                               />
                             </svg>
                           </div>
-                          <span style={{ fontSize: "1rem", lineHeight: 1.6 }}>
-                            {feature}
+                          <span
+                            style={{
+                              fontSize: "1rem",
+                              lineHeight: 1.6,
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {tag}
                           </span>
                         </li>
                       ))}

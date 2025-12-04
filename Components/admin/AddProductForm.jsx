@@ -13,7 +13,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
 
-  // Anime search states - ENHANCED
+  // Anime search states
   const [animeList, setAnimeList] = useState([]);
   const [animeSearch, setAnimeSearch] = useState("");
   const [loadingAnime, setLoadingAnime] = useState(false);
@@ -28,8 +28,18 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
   const [subCategories, setSubCategories] = useState([]);
   const [loadingSubCategories, setLoadingSubCategories] = useState(false);
 
+  // Currency formatting
+  const formatINR = (price) => {
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    if (isNaN(numPrice) || !numPrice) return '₹0';
+    return `₹${numPrice.toLocaleString('en-IN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    })}`;
+  };
+
   // Initialize form with all fields properly defined
-  const [formData, setFormData] = useState(() => {
+  const getInitialFormData = () => {
     if (initialData) {
       return {
         // Basic Information
@@ -51,25 +61,25 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
           episode: initialData.anime?.episode || "",
         },
 
-        // Pricing
-        price: initialData.price || "",
-        originalPrice: initialData.originalPrice || "",
+        // Pricing - INR
+        price: initialData.price?.toString() || "",
+        originalPrice: initialData.originalPrice?.toString() || "",
         discount: initialData.discount || 0,
-        currency: initialData.currency || "USD",
+        currency: "INR",
 
         // Inventory
-        stock: initialData.stock || "",
+        stock: initialData.stock?.toString() || "",
         trackQuantity: initialData.trackQuantity ?? true,
-        lowStockThreshold: initialData.lowStockThreshold || "10",
+        lowStockThreshold: initialData.lowStockThreshold?.toString() || "10",
         allowBackorder: initialData.allowBackorder || false,
 
         // Shipping
         shipping: {
-          weight: initialData.shipping?.weight || "",
+          weight: initialData.shipping?.weight?.toString() || "",
           dimensions: {
-            length: initialData.shipping?.dimensions?.length || "",
-            width: initialData.shipping?.dimensions?.width || "",
-            height: initialData.shipping?.dimensions?.height || "",
+            length: initialData.shipping?.dimensions?.length?.toString() || "",
+            width: initialData.shipping?.dimensions?.width?.toString() || "",
+            height: initialData.shipping?.dimensions?.height?.toString() || "",
           },
           freeShipping: initialData.shipping?.freeShipping || false,
           estimatedDelivery: initialData.shipping?.estimatedDelivery || "",
@@ -82,7 +92,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         licensedBy: initialData.licensedBy || "",
 
         // Organization
-        tags: initialData.tags || [],
+        tags: Array.isArray(initialData.tags) ? initialData.tags : [],
         status: initialData.status || "draft",
         isFeatured: initialData.isFeatured || false,
         isNewArrival: initialData.isNewArrival || false,
@@ -92,20 +102,24 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         ageRating: initialData.ageRating || "All Ages",
 
         // Images
-        images: initialData.images || [],
+        images: Array.isArray(initialData.images) ? initialData.images : [],
 
         // Specifications
         specifications: {
           material: initialData.specifications?.material || "",
           weight: initialData.specifications?.weight || "",
           dimensions: {
-            length: initialData.specifications?.dimensions?.length || "",
-            width: initialData.specifications?.dimensions?.width || "",
-            height: initialData.specifications?.dimensions?.height || "",
+            length: initialData.specifications?.dimensions?.length?.toString() || "",
+            width: initialData.specifications?.dimensions?.width?.toString() || "",
+            height: initialData.specifications?.dimensions?.height?.toString() || "",
             unit: initialData.specifications?.dimensions?.unit || "cm",
           },
-          careInstructions: initialData.specifications?.careInstructions || [],
-          features: initialData.specifications?.features || [],
+          careInstructions: Array.isArray(initialData.specifications?.careInstructions) 
+            ? initialData.specifications.careInstructions 
+            : [],
+          features: Array.isArray(initialData.specifications?.features) 
+            ? initialData.specifications.features 
+            : [],
         },
 
         // Availability
@@ -113,96 +127,77 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         isPreOrder: initialData.isPreOrder || false,
         preOrderReleaseDate: initialData.preOrderReleaseDate || "",
         isLimitedEdition: initialData.isLimitedEdition || false,
-        limitedQuantity: initialData.limitedQuantity || "",
-      };
-    } else {
-      return {
-        // Basic Information
-        name: "",
-        sku: "",
-        categoryRef: "",
-        category: "",
-        subCategoryRef: null,
-        subCategory: "",
-        description: "",
-        shortDescription: "",
-
-        // Anime Specific
-        anime: {
-          name: "",
-          character: "",
-          series: "",
-          season: "",
-          episode: "",
-        },
-
-        // Pricing
-        price: "",
-        originalPrice: "",
-        discount: 0,
-        currency: "USD",
-
-        // Inventory
-        stock: "",
-        trackQuantity: true,
-        lowStockThreshold: "10",
-        allowBackorder: false,
-
-        // Shipping
-        shipping: {
-          weight: "",
-          dimensions: {
-            length: "",
-            width: "",
-            height: "",
-          },
-          freeShipping: false,
-          estimatedDelivery: "",
-        },
-
-        // Brand & Licensing
-        brand: "",
-        manufacturer: "",
-        isOfficial: false,
-        licensedBy: "",
-
-        // Organization
-        tags: [],
-        status: "draft",
-        isFeatured: false,
-        isNewArrival: false,
-        isBestseller: false,
-
-        // Age Rating
-        ageRating: "All Ages",
-
-        // Images
-        images: [],
-
-        // Specifications
-        specifications: {
-          material: "",
-          weight: "",
-          dimensions: {
-            length: "",
-            width: "",
-            height: "",
-            unit: "cm",
-          },
-          careInstructions: [],
-          features: [],
-        },
-
-        // Availability
-        isAvailable: true,
-        isPreOrder: false,
-        preOrderReleaseDate: "",
-        isLimitedEdition: false,
-        limitedQuantity: "",
+        limitedQuantity: initialData.limitedQuantity?.toString() || "",
       };
     }
-  });
 
+    // Default empty form
+    return {
+      name: "",
+      sku: "",
+      categoryRef: "",
+      category: "",
+      subCategoryRef: null,
+      subCategory: "",
+      description: "",
+      shortDescription: "",
+      anime: {
+        name: "",
+        character: "",
+        series: "",
+        season: "",
+        episode: "",
+      },
+      price: "",
+      originalPrice: "",
+      discount: 0,
+      currency: "INR",
+      stock: "",
+      trackQuantity: true,
+      lowStockThreshold: "10",
+      allowBackorder: false,
+      shipping: {
+        weight: "",
+        dimensions: {
+          length: "",
+          width: "",
+          height: "",
+        },
+        freeShipping: false,
+        estimatedDelivery: "",
+      },
+      brand: "",
+      manufacturer: "",
+      isOfficial: false,
+      licensedBy: "",
+      tags: [],
+      status: "draft",
+      isFeatured: false,
+      isNewArrival: false,
+      isBestseller: false,
+      ageRating: "All Ages",
+      images: [],
+      specifications: {
+        material: "",
+        weight: "",
+        dimensions: {
+          length: "",
+          width: "",
+          height: "",
+          unit: "cm",
+        },
+        careInstructions: [],
+        features: [],
+      },
+      isAvailable: true,
+      isPreOrder: false,
+      preOrderReleaseDate: "",
+      isLimitedEdition: false,
+      limitedQuantity: "",
+    };
+  };
+
+  const [formData, setFormData] = useState(getInitialFormData);
   const [errors, setErrors] = useState({});
   const [newTag, setNewTag] = useState("");
 
@@ -250,6 +245,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
+      toast.error("Failed to load categories");
       setCategories([{ value: "", label: "Select Category", _id: "", name: "" }]);
     } finally {
       setLoadingCategories(false);
@@ -269,7 +265,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
       const response = await fetch(`/api/admin/products/categories/${categoryId}/subcategories`);
       
       if (!response.ok) {
-        console.warn('Failed to fetch subcategories');
         setSubCategories([]);
         return;
       }
@@ -301,7 +296,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
   };
 
-  // ENHANCED: Search anime from YOUR backend database
+  // Search anime from database
   const searchAnime = async (query) => {
     if (!query || query.trim().length < 2) {
       setAnimeList([]);
@@ -312,7 +307,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     try {
       setLoadingAnime(true);
       
-      // Fetch from YOUR anime API
       const response = await fetch(
         `/api/anime?search=${encodeURIComponent(query.trim())}&limit=10&active=true`
       );
@@ -323,8 +317,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
       
       const data = await response.json();
       
-      console.log('Anime search results:', data);
-      
       if (data.success && data.data && data.data.length > 0) {
         const animeResults = data.data.map(anime => ({
           _id: anime._id,
@@ -333,7 +325,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
           japaneseName: anime.japaneseName || '',
           image: anime.image,
           banner: anime.banner || '',
-          genre: anime.genre || [],
+          genre: Array.isArray(anime.genre) ? anime.genre : [],
           studio: anime.studio || '',
           releaseYear: anime.releaseYear,
           status: anime.status,
@@ -346,52 +338,40 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
       } else {
         setAnimeList([]);
         setShowAnimeDropdown(false);
-        
-        // Show a message if no results found
-        if (query.length >= 2) {
-          toast.error('No anime found. Try a different search term.');
-        }
       }
     } catch (error) {
       console.error("Error searching anime:", error);
       setAnimeList([]);
       setShowAnimeDropdown(false);
-      toast.error('Failed to search anime. Please try again.');
+      toast.error('Failed to search anime');
     } finally {
       setLoadingAnime(false);
     }
   };
 
-  // ENHANCED: Handle anime selection with auto-fill
+  // Handle anime selection
   const handleAnimeSelect = (anime) => {
-    console.log('Selected anime:', anime);
-    
     setSelectedAnime(anime);
     setAnimeSearch(anime.name);
     setShowAnimeDropdown(false);
     
-    // Auto-fill form data with anime information
     setFormData((prev) => ({
       ...prev,
       anime: {
         name: anime.name,
-        series: anime.name, // Use anime name as series
-        character: prev.anime?.character || '', // Keep existing character if any
+        series: anime.name,
+        character: prev.anime?.character || '',
         season: prev.anime?.season || '',
         episode: prev.anime?.episode || '',
       },
-      // Auto-suggest tags from anime genres
       tags: Array.from(new Set([
         ...prev.tags,
         'anime',
         anime.name.toLowerCase().replace(/\s+/g, '-'),
         ...(anime.genre || []).map(g => g.toLowerCase()),
       ])),
-      // Optionally set age rating based on anime
-      ageRating: prev.ageRating || 'All Ages',
     }));
     
-    // Clear anime error if exists
     if (errors.anime) {
       setErrors((prev) => ({ ...prev, anime: "" }));
     }
@@ -399,7 +379,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     toast.success(`Selected: ${anime.name}`);
   };
 
-  // ENHANCED: Debounced search with better UX
+  // Debounced anime search
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (animeSearch.length >= 2) {
@@ -429,7 +409,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
   useEffect(() => {
     fetchCategories();
     
-    // If editing, set anime search to existing anime name
     if (isEdit && initialData?.anime?.name) {
       setAnimeSearch(initialData.anime.name);
       setSelectedAnime({
@@ -438,7 +417,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
       });
     }
     
-    // If editing, set selected category and subcategory IDs
     if (isEdit && initialData) {
       const catId = initialData.categoryRef?._id || initialData.categoryRef;
       if (catId) {
@@ -482,6 +460,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
   }, [subCategories, isEdit, initialData]);
 
+  // GSAP Animation
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.from(formRef.current, {
@@ -495,7 +474,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     return () => ctx.revert();
   }, [currentStep]);
 
-  // Auto-generate SKU only if not editing and SKU is empty
+  // Auto-generate SKU
   useEffect(() => {
     if (!isEdit && formData.name && formData.category && !formData.sku) {
       const category = formData.category.substring(0, 3).toUpperCase();
@@ -549,6 +528,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }));
   };
 
+  // Handle input change
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
 
@@ -580,11 +560,13 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
   };
 
+  // Handle tag operations
   const handleAddTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim().toLowerCase())) {
+    const trimmedTag = newTag.trim().toLowerCase();
+    if (trimmedTag && !formData.tags.includes(trimmedTag)) {
       setFormData((prev) => ({
         ...prev,
-        tags: [...prev.tags, newTag.trim().toLowerCase()],
+        tags: [...prev.tags, trimmedTag],
       }));
       setNewTag("");
     }
@@ -597,6 +579,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }));
   };
 
+  // Handle image upload
   const handleImageUpload = (images) => {
     const processedImages = images.map((img, index) => {
       if (typeof img === 'string') {
@@ -618,6 +601,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
   };
 
+  // Validate step
   const validateStep = (step) => {
     const newErrors = {};
 
@@ -630,20 +614,40 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     }
 
     if (step === 2) {
-      if (!formData.price) newErrors.price = "Price is required";
-      if (formData.price && isNaN(formData.price)) newErrors.price = "Price must be a number";
-      if (formData.price && parseFloat(formData.price) <= 0) newErrors.price = "Price must be greater than 0";
+      if (!formData.price) {
+        newErrors.price = "Price is required";
+      } else {
+        const priceNum = parseFloat(formData.price);
+        if (isNaN(priceNum)) {
+          newErrors.price = "Price must be a valid number";
+        } else if (priceNum <= 0) {
+          newErrors.price = "Price must be greater than 0";
+        }
+      }
+
+      if (formData.originalPrice) {
+        const origPriceNum = parseFloat(formData.originalPrice);
+        if (isNaN(origPriceNum)) {
+          newErrors.originalPrice = "Original price must be a valid number";
+        } else if (formData.price && origPriceNum <= parseFloat(formData.price)) {
+          newErrors.originalPrice = "Original price must be greater than sale price";
+        }
+      }
     }
 
     if (step === 3) {
-      if (formData.trackQuantity && !formData.stock) {
-        newErrors.stock = "Stock quantity is required when tracking inventory";
+      if (formData.trackQuantity) {
+        if (!formData.stock) {
+          newErrors.stock = "Stock quantity is required when tracking inventory";
+        } else if (isNaN(formData.stock) || parseInt(formData.stock) < 0) {
+          newErrors.stock = "Stock must be a valid number";
+        }
       }
-      if (formData.stock && isNaN(formData.stock)) {
-        newErrors.stock = "Stock must be a number";
-      }
+      
       if (!formData.shipping?.weight) {
         newErrors.weight = "Weight is required for shipping";
+      } else if (isNaN(formData.shipping.weight) || parseFloat(formData.shipping.weight) <= 0) {
+        newErrors.weight = "Weight must be a valid positive number";
       }
     }
 
@@ -657,7 +661,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
 
       if (!hasValidImages) {
         newErrors.images = "At least one product image is required";
-        toast.error("Please add at least one product image");
       }
     }
 
@@ -665,6 +668,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Navigation functions
   const handleNextStep = () => {
     if (validateStep(currentStep)) {
       setCurrentStep((prev) => Math.min(prev + 1, 5));
@@ -679,8 +683,9 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Submit form
   const handleSubmit = async (status) => {
-    // Validate all steps before submitting
+    // Validate all steps
     for (let i = 1; i <= 4; i++) {
       if (!validateStep(i)) {
         setCurrentStep(i);
@@ -723,7 +728,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         
         anime: {
           name: formData.anime.name.trim(),
-          series: formData.anime.series?.trim() || '',
+          series: formData.anime.series?.trim() || formData.anime.name.trim(),
           character: formData.anime.character?.trim() || '',
           season: formData.anime.season?.trim() || '',
           episode: formData.anime.episode?.trim() || '',
@@ -738,8 +743,10 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         
         price: parseFloat(formData.price),
         originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : null,
-        discount: 0,
-        currency: formData.currency || 'USD',
+        discount: formData.originalPrice && formData.price 
+          ? Math.round(((parseFloat(formData.originalPrice) - parseFloat(formData.price)) / parseFloat(formData.originalPrice)) * 100)
+          : 0,
+        currency: 'INR',
         
         stock: formData.trackQuantity ? parseInt(formData.stock) : 0,
         sku: formData.sku,
@@ -751,10 +758,10 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         specifications: {
           material: formData.specifications?.material || '',
           weight: formData.specifications?.weight || '',
-          dimensions: formData.specifications?.dimensions || {
-            length: 0,
-            width: 0,
-            height: 0,
+          dimensions: {
+            length: parseFloat(formData.specifications?.dimensions?.length || 0),
+            width: parseFloat(formData.specifications?.dimensions?.width || 0),
+            height: parseFloat(formData.specifications?.dimensions?.height || 0),
             unit: 'cm'
           },
           careInstructions: formData.specifications?.careInstructions || [],
@@ -791,8 +798,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
         ageRating: formData.ageRating || 'All Ages',
       };
 
-      console.log('Submitting product data:', submissionData);
-
       const url = isEdit
         ? `/api/admin/products/${initialData._id}`
         : '/api/products/add';
@@ -809,50 +814,19 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
       });
 
       if (!response.ok) {
-        let errorData;
-        const contentType = response.headers.get('content-type');
-        
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            errorData = await response.json();
-          } catch (jsonError) {
-            console.error('Error parsing error response:', jsonError);
-            throw new Error(`Server error: ${response.status} ${response.statusText}`);
-          }
-        } else {
-          const textResponse = await response.text();
-          console.error('Non-JSON error response:', textResponse);
-          throw new Error(`Server error: ${response.status} - ${textResponse || response.statusText}`);
-        }
+        const errorData = await response.json().catch(() => ({
+          error: `Server error: ${response.status} ${response.statusText}`
+        }));
 
         if (errorData.details?.validationErrors) {
-          const validationErrors = errorData.details.validationErrors;
-          const errorMessages = Object.values(validationErrors).join(', ');
+          const errorMessages = Object.values(errorData.details.validationErrors).join(', ');
           throw new Error(errorMessages);
         }
 
         throw new Error(errorData.error || errorData.message || 'Failed to save product');
       }
 
-      let data;
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          data = await response.json();
-        } catch (jsonError) {
-          console.error('Error parsing success response:', jsonError);
-          toast.dismiss(loadingToast);
-          toast.success(`Product ${isEdit ? 'updated' : 'created'} successfully!`);
-          setTimeout(() => {
-            router.push('/admin/products');
-          }, 1500);
-          return;
-        }
-      } else {
-        console.warn('Response is not JSON:', await response.text());
-        throw new Error('Invalid response format from server');
-      }
+      const data = await response.json();
 
       toast.dismiss(loadingToast);
       toast.success(data.message || `Product ${isEdit ? 'updated' : 'created'} successfully!`);
@@ -864,10 +838,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
     } catch (error) {
       console.error('Error saving product:', error);
       toast.dismiss(loadingToast);
-      
-      const errorMessage = error.message || 'Failed to save product. Please try again.';
-      toast.error(errorMessage);
-      
+      toast.error(error.message || 'Failed to save product. Please try again.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSaving(false);
@@ -886,9 +857,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                 <div key={step.number} className="flex items-center">
                   <div className="flex flex-col items-center">
                     <button
-                      onClick={() =>
-                        currentStep > step.number && setCurrentStep(step.number)
-                      }
+                      onClick={() => currentStep > step.number && setCurrentStep(step.number)}
                       disabled={currentStep < step.number}
                       className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold transition-all duration-300 ${
                         currentStep >= step.number
@@ -904,9 +873,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                     </button>
                     <span
                       className={`text-xs mt-2 font-medium hidden sm:block ${
-                        currentStep >= step.number
-                          ? "text-black"
-                          : "text-black/40"
+                        currentStep >= step.number ? "text-black" : "text-black/40"
                       }`}
                     >
                       {step.title}
@@ -926,17 +893,12 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
           </div>
 
           {/* Form Content */}
-          <div
-            ref={formRef}
-            className="bg-white rounded-2xl p-6 md:p-8 shadow-lg border border-black/5"
-          >
+          <div ref={formRef} className="bg-white rounded-2xl p-6 md:p-8 shadow-lg border border-black/5">
             {/* Step 1: Basic Information */}
             {currentStep === 1 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-black mb-2">
-                    Basic Information
-                  </h2>
+                  <h2 className="text-2xl font-bold text-black mb-2">Basic Information</h2>
                   <p className="text-sm text-black/50">
                     Add the essential details about your product
                   </p>
@@ -963,7 +925,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                     )}
                   </div>
 
-                  {/* ENHANCED: Anime Search with Better UI */}
+                  {/* Anime Search */}
                   <div className="relative anime-search-container">
                     <label className="block text-sm font-medium text-black mb-2">
                       Anime Name <span className="text-red-500">*</span>
@@ -983,14 +945,12 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                         }`}
                       />
                       
-                      {/* Loading Spinner */}
                       {loadingAnime && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
                           <div className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                         </div>
                       )}
                       
-                      {/* Search Icon */}
                       {!loadingAnime && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40">
                           🔍
@@ -999,12 +959,9 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                     </div>
                     
                     {errors.anime && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.anime}
-                      </p>
+                      <p className="text-red-500 text-xs mt-1">{errors.anime}</p>
                     )}
                     
-                    {/* Selected Anime Badge */}
                     {selectedAnime && (
                       <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-sm">
                         <span className="text-green-600">✓</span>
@@ -1028,7 +985,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                       </div>
                     )}
 
-                    {/* ENHANCED: Autocomplete Dropdown */}
+                    {/* Autocomplete Dropdown */}
                     {showAnimeDropdown && animeList.length > 0 && (
                       <div className="absolute z-20 w-full mt-1 bg-white border border-black/10 rounded-xl shadow-2xl max-h-96 overflow-y-auto">
                         <div className="p-2 bg-black/5 border-b border-black/10">
@@ -1053,9 +1010,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                               />
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-black truncate">
-                                {anime.name}
-                              </p>
+                              <p className="font-medium text-black truncate">{anime.name}</p>
                               {anime.englishName && anime.englishName !== anime.name && (
                                 <p className="text-sm text-black/50 truncate">
                                   {anime.englishName}
@@ -1107,7 +1062,6 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                       </div>
                     )}
                     
-                    {/* No Results Message */}
                     {!loadingAnime && animeSearch.length >= 2 && animeList.length === 0 && (
                       <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800">
                         <p className="font-medium">No anime found for "{animeSearch}"</p>
@@ -1118,7 +1072,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                     )}
                   </div>
 
-                  {/* Character & Series - Shows when anime is selected */}
+                  {/* Character & Series */}
                   {formData.anime?.name && (
                     <div className="grid md:grid-cols-2 gap-4 p-4 bg-black/5 rounded-xl">
                       <div>
@@ -1131,10 +1085,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                           onChange={(e) =>
                             setFormData((prev) => ({
                               ...prev,
-                              anime: {
-                                ...prev.anime,
-                                character: e.target.value,
-                              },
+                              anime: { ...prev.anime, character: e.target.value },
                             }))
                           }
                           placeholder="e.g., Naruto Uzumaki"
@@ -1173,9 +1124,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                         name="sku"
                         value={formData.sku || ""}
                         onChange={handleInputChange}
-                        placeholder={
-                          isEdit ? "Product SKU" : "Will be auto-generated"
-                        }
+                        placeholder={isEdit ? "Product SKU" : "Will be auto-generated"}
                         className="w-full px-4 py-3 bg-black/5 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all"
                         readOnly={!isEdit}
                       />
@@ -1208,9 +1157,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                         </div>
                       )}
                       {errors.category && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.category}
-                        </p>
+                        <p className="text-red-500 text-xs mt-1">{errors.category}</p>
                       )}
                     </div>
                   </div>
@@ -1264,9 +1211,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                         }`}
                       />
                       {errors.brand && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.brand}
-                        </p>
+                        <p className="text-red-500 text-xs mt-1">{errors.brand}</p>
                       )}
                     </div>
 
@@ -1297,15 +1242,11 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                       rows={6}
                       placeholder="Describe your product in detail..."
                       className={`w-full px-4 py-3 bg-black/5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all resize-none ${
-                        errors.description
-                          ? "border-red-500"
-                          : "border-black/10"
+                        errors.description ? "border-red-500" : "border-black/10"
                       }`}
                     />
                     {errors.description && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.description}
-                      </p>
+                      <p className="text-red-500 text-xs mt-1">{errors.description}</p>
                     )}
                     <p className="text-xs text-black/40 mt-1">
                       {(formData.description || "").length} characters
@@ -1323,8 +1264,12 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                       value={formData.shortDescription || ""}
                       onChange={handleInputChange}
                       placeholder="Brief summary for product cards"
+                      maxLength={200}
                       className="w-full px-4 py-3 bg-black/5 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all"
                     />
+                    <p className="text-xs text-black/40 mt-1">
+                      {(formData.shortDescription || "").length}/200 characters
+                    </p>
                   </div>
 
                   {/* Age Rating */}
@@ -1356,10 +1301,12 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                         type="text"
                         value={newTag || ""}
                         onChange={(e) => setNewTag(e.target.value)}
-                        onKeyPress={(e) =>
-                          e.key === "Enter" &&
-                          (e.preventDefault(), handleAddTag())
-                        }
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddTag();
+                          }
+                        }}
                         placeholder="Add tags (e.g., anime, naruto, collectible)"
                         className="flex-1 px-4 py-3 bg-black/5 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all"
                       />
@@ -1376,7 +1323,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                         {formData.tags.map((tag) => (
                           <span
                             key={tag}
-                            className="px-3 py-1 bg-black/10 rounded-full text-sm text-black inline-flex items-center gap-2"
+                            className="px-3 py-1 bg-black/10 rounded-full text-sm text-black inline-flex items-center gap-2 hover:bg-black/20 transition-colors"
                           >
                             {tag}
                             <button
@@ -1399,101 +1346,144 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
             {currentStep === 2 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-black mb-2">
-                    Pricing
-                  </h2>
+                  <h2 className="text-2xl font-bold text-black mb-2">Pricing</h2>
                   <p className="text-sm text-black/50">
-                    Set your product pricing and profit margins
+                    Set your product pricing in Indian Rupees (₹)
                   </p>
                 </div>
 
                 <div className="space-y-4">
+                  {/* Currency Info Banner */}
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white text-xl">
+                        💰
+                      </div>
+                      <div>
+                        <p className="font-semibold text-green-900">Currency: Indian Rupee (INR)</p>
+                        <p className="text-xs text-green-700">All prices are in ₹ INR</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-black mb-2">
-                        Price <span className="text-red-500">*</span>
+                        Price (₹) <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-black/40">
-                          $
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-black/60 font-semibold">
+                          ₹
                         </span>
                         <input
                           type="number"
                           name="price"
                           value={formData.price || ""}
                           onChange={handleInputChange}
-                          step="0.01"
+                          step="1"
                           min="0"
-                          placeholder="0.00"
-                          className={`w-full pl-8 pr-4 py-3 bg-black/5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all ${
+                          placeholder="0"
+                          className={`w-full pl-10 pr-4 py-3 bg-black/5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all ${
                             errors.price ? "border-red-500" : "border-black/10"
                           }`}
                         />
                       </div>
                       {errors.price && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.price}
+                        <p className="text-red-500 text-xs mt-1">{errors.price}</p>
+                      )}
+                      {formData.price && !errors.price && (
+                        <p className="text-xs text-black/40 mt-1">
+                          {formatINR(formData.price)}
                         </p>
                       )}
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-black mb-2">
-                        Compare at Price
+                        Compare at Price (₹)
                       </label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-black/40">
-                          $
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-black/60 font-semibold">
+                          ₹
                         </span>
                         <input
                           type="number"
                           name="originalPrice"
                           value={formData.originalPrice || ""}
                           onChange={handleInputChange}
-                          step="0.01"
+                          step="1"
                           min="0"
-                          placeholder="0.00"
-                          className="w-full pl-8 pr-4 py-3 bg-black/5 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all"
+                          placeholder="0"
+                          className={`w-full pl-10 pr-4 py-3 bg-black/5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all ${
+                            errors.originalPrice ? "border-red-500" : "border-black/10"
+                          }`}
                         />
                       </div>
-                      <p className="text-xs text-black/40 mt-1">
-                        Original price for sale calculation
-                      </p>
+                      {errors.originalPrice && (
+                        <p className="text-red-500 text-xs mt-1">{errors.originalPrice}</p>
+                      )}
+                      {formData.originalPrice && !errors.originalPrice && (
+                        <p className="text-xs text-black/40 mt-1">
+                          {formatINR(formData.originalPrice)}
+                        </p>
+                      )}
                     </div>
                   </div>
 
                   {/* Discount Calculation */}
                   {formData.price && formData.originalPrice && parseFloat(formData.originalPrice) > parseFloat(formData.price) && (
-                    <div className="bg-black/5 rounded-xl p-6 space-y-3">
-                      <h3 className="font-semibold text-black mb-3">
+                    <div className="bg-gradient-to-br from-black/5 to-black/10 rounded-xl p-6 border border-black/10">
+                      <h3 className="font-semibold text-black mb-4 flex items-center gap-2">
+                        <span className="text-xl">🏷️</span>
                         Discount Information
                       </h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs text-black/50 mb-1">You Save</p>
-                          <p className="text-xl font-bold text-black">
-                            $
-                            {(
-                              parseFloat(formData.originalPrice) -
-                              parseFloat(formData.price)
-                            ).toFixed(2)}
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="bg-white rounded-lg p-4">
+                          <p className="text-xs text-black/50 mb-1">Customer Saves</p>
+                          <p className="text-2xl font-bold text-black">
+                            {formatINR(parseFloat(formData.originalPrice) - parseFloat(formData.price))}
                           </p>
                         </div>
-                        <div>
-                          <p className="text-xs text-black/50 mb-1">Discount %</p>
-                          <p className="text-xl font-bold text-green-600">
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4">
+                          <p className="text-xs text-green-700 mb-1">Discount %</p>
+                          <p className="text-2xl font-bold text-green-600">
                             {(
-                              ((parseFloat(formData.originalPrice) -
-                                parseFloat(formData.price)) /
+                              ((parseFloat(formData.originalPrice) - parseFloat(formData.price)) /
                                 parseFloat(formData.originalPrice)) *
                               100
-                            ).toFixed(0)}
-                            % OFF
+                            ).toFixed(0)}% OFF
                           </p>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 pt-4 border-t border-black/10">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-black/60">Original Price:</span>
+                          <span className="line-through text-black/40">{formatINR(formData.originalPrice)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm mt-2">
+                          <span className="text-black/60">Sale Price:</span>
+                          <span className="font-bold text-green-600">{formatINR(formData.price)}</span>
                         </div>
                       </div>
                     </div>
                   )}
+
+                  {/* Pricing Tips */}
+                  <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">💡</span>
+                      <div>
+                        <p className="text-sm font-medium text-blue-900 mb-1">Pricing Tips</p>
+                        <ul className="text-xs text-blue-800 space-y-1">
+                          <li>• Research competitor prices for similar products</li>
+                          <li>• Consider your costs and desired profit margin</li>
+                          <li>• Round prices to psychologically appealing numbers (₹999, ₹1,499)</li>
+                          <li>• Offer discounts strategically to boost sales</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1548,15 +1538,11 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                             min="0"
                             placeholder="0"
                             className={`w-full px-4 py-3 bg-black/5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all ${
-                              errors.stock
-                                ? "border-red-500"
-                                : "border-black/10"
+                              errors.stock ? "border-red-500" : "border-black/10"
                             }`}
                           />
                           {errors.stock && (
-                            <p className="text-red-500 text-xs mt-1">
-                              {errors.stock}
-                            </p>
+                            <p className="text-red-500 text-xs mt-1">{errors.stock}</p>
                           )}
                         </div>
 
@@ -1583,7 +1569,8 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
 
                   {/* Shipping Dimensions */}
                   <div className="pt-6 border-t border-black/5">
-                    <h3 className="font-semibold text-black mb-4">
+                    <h3 className="font-semibold text-black mb-4 flex items-center gap-2">
+                      <span className="text-xl">📦</span>
                       Shipping Information
                     </h3>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -1604,9 +1591,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                           }`}
                         />
                         {errors.weight && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {errors.weight}
-                          </p>
+                          <p className="text-red-500 text-xs mt-1">{errors.weight}</p>
                         )}
                       </div>
 
@@ -1655,6 +1640,42 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                         </div>
                       </div>
                     </div>
+
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-black mb-2">
+                        Estimated Delivery
+                      </label>
+                      <input
+                        type="text"
+                        name="shipping.estimatedDelivery"
+                        value={formData.shipping?.estimatedDelivery || ""}
+                        onChange={handleInputChange}
+                        placeholder="e.g., 5-7 business days"
+                        className="w-full px-4 py-3 bg-black/5 border border-black/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-black/20 transition-all"
+                      />
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-3 p-4 bg-black/5 rounded-xl">
+                      <input
+                        type="checkbox"
+                        name="shipping.freeShipping"
+                        id="freeShipping"
+                        checked={formData.shipping?.freeShipping || false}
+                        onChange={handleInputChange}
+                        className="w-5 h-5 rounded border-black/20 text-black focus:ring-2 focus:ring-black/20 cursor-pointer"
+                      />
+                      <div>
+                        <label
+                          htmlFor="freeShipping"
+                          className="font-medium text-black cursor-pointer"
+                        >
+                          Free Shipping
+                        </label>
+                        <p className="text-xs text-black/50">
+                          Offer free shipping for this product
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1682,6 +1703,22 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                   images={formData.images || []}
                   onImagesChange={handleImageUpload}
                 />
+
+                <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">📸</span>
+                    <div>
+                      <p className="text-sm font-medium text-blue-900 mb-1">Image Guidelines</p>
+                      <ul className="text-xs text-blue-800 space-y-1">
+                        <li>• Use high-quality images (minimum 800x800px)</li>
+                        <li>• First image will be used as the main product image</li>
+                        <li>• Show product from multiple angles</li>
+                        <li>• Use white or neutral backgrounds for best results</li>
+                        <li>• Maximum file size: 5MB per image</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1693,12 +1730,42 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                     Review & {isEdit ? "Update" : "Publish"}
                   </h2>
                   <p className="text-sm text-black/50">
-                    Review your product details before{" "}
-                    {isEdit ? "updating" : "publishing"}
+                    Review your product details before {isEdit ? "updating" : "publishing"}
                   </p>
                 </div>
 
                 <ProductPreview product={formData} />
+
+                {/* Pricing Summary */}
+                <div className="bg-white rounded-xl p-6 border border-black/10">
+                  <h3 className="font-semibold text-black mb-4">Pricing Summary</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-black/60">Price:</span>
+                      <span className="text-xl font-bold text-black">{formatINR(formData.price)}</span>
+                    </div>
+                    {formData.originalPrice && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-black/60">Original Price:</span>
+                          <span className="line-through text-black/40">{formatINR(formData.originalPrice)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-green-600">
+                          <span>You Save:</span>
+                          <span className="font-bold">
+                            {formatINR(parseFloat(formData.originalPrice) - parseFloat(formData.price))}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    <div className="pt-3 border-t border-black/10">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-black/60">Currency:</span>
+                        <span className="font-medium">Indian Rupee (₹ INR)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1710,9 +1777,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                 disabled={currentStep === 1}
                 className="px-6 py-3 bg-black/5 text-black rounded-xl font-medium hover:bg-black/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed inline-flex items-center gap-2 group"
               >
-                <span className="group-hover:-translate-x-1 transition-transform">
-                  ←
-                </span>
+                <span className="group-hover:-translate-x-1 transition-transform">←</span>
                 Previous
               </button>
 
@@ -1723,9 +1788,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                   className="px-6 py-3 bg-black text-white rounded-xl font-medium hover:bg-black/90 transition-all inline-flex items-center gap-2 group"
                 >
                   Next
-                  <span className="group-hover:translate-x-1 transition-transform">
-                    →
-                  </span>
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
                 </button>
               ) : (
                 <div className="flex gap-3">
@@ -1765,7 +1828,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
             <h3 className="font-semibold text-black mb-4">Product Features</h3>
 
             <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-black/5 rounded-xl">
+              <div className="flex items-center gap-3 p-3 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">
                 <input
                   type="checkbox"
                   name="isFeatured"
@@ -1774,7 +1837,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                   onChange={handleInputChange}
                   className="w-5 h-5 rounded border-black/20 text-black focus:ring-2 focus:ring-black/20 cursor-pointer"
                 />
-                <div>
+                <div className="flex-1">
                   <label
                     htmlFor="isFeatured"
                     className="font-medium text-black text-sm cursor-pointer"
@@ -1785,7 +1848,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 bg-black/5 rounded-xl">
+              <div className="flex items-center gap-3 p-3 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">
                 <input
                   type="checkbox"
                   name="isNewArrival"
@@ -1794,7 +1857,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                   onChange={handleInputChange}
                   className="w-5 h-5 rounded border-black/20 text-black focus:ring-2 focus:ring-black/20 cursor-pointer"
                 />
-                <div>
+                <div className="flex-1">
                   <label
                     htmlFor="isNewArrival"
                     className="font-medium text-black text-sm cursor-pointer"
@@ -1805,7 +1868,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 bg-black/5 rounded-xl">
+              <div className="flex items-center gap-3 p-3 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">
                 <input
                   type="checkbox"
                   name="isBestseller"
@@ -1814,7 +1877,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                   onChange={handleInputChange}
                   className="w-5 h-5 rounded border-black/20 text-black focus:ring-2 focus:ring-black/20 cursor-pointer"
                 />
-                <div>
+                <div className="flex-1">
                   <label
                     htmlFor="isBestseller"
                     className="font-medium text-black text-sm cursor-pointer"
@@ -1825,7 +1888,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-3 bg-black/5 rounded-xl">
+              <div className="flex items-center gap-3 p-3 bg-black/5 rounded-xl hover:bg-black/10 transition-colors">
                 <input
                   type="checkbox"
                   name="isOfficial"
@@ -1834,7 +1897,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
                   onChange={handleInputChange}
                   className="w-5 h-5 rounded border-black/20 text-black focus:ring-2 focus:ring-black/20 cursor-pointer"
                 />
-                <div>
+                <div className="flex-1">
                   <label
                     htmlFor="isOfficial"
                     className="font-medium text-black text-sm cursor-pointer"
@@ -1887,7 +1950,7 @@ const AddProductForm = ({ initialData = null, isEdit = false }) => {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-black mt-0.5">•</span>
-                <span>Set competitive pricing based on market</span>
+                <span>Set competitive pricing in ₹ INR</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-black mt-0.5">•</span>

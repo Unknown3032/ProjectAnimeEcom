@@ -14,6 +14,15 @@ const ProductsGrid = ({ view = 'grid', filters = {} }) => {
   const [totalProducts, setTotalProducts] = useState(0);
   const productsPerPage = 12;
 
+  // Format currency to INR
+  const formatINR = (price, currency = '₹') => {
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    return `₹${numPrice.toLocaleString('en-IN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    })}`;
+  };
+
   // Fetch products whenever filters or page changes
   useEffect(() => {
     fetchProducts();
@@ -83,31 +92,27 @@ const ProductsGrid = ({ view = 'grid', filters = {} }) => {
         if (view === 'grid') {
           const cards = gridRef.current.querySelectorAll('.product-card');
           if (cards.length > 0) {
-            // Set initial state
             gsap.set(cards, { opacity: 0, scale: 0.9 });
-            // Animate to visible
             gsap.to(cards, {
               opacity: 1,
               scale: 1,
               duration: 0.5,
               stagger: 0.05,
               ease: 'power2.out',
-              clearProps: 'all', // Clear all properties after animation
+              clearProps: 'all',
             });
           }
         } else {
           const rows = gridRef.current.querySelectorAll('.product-row');
           if (rows.length > 0) {
-            // Set initial state
             gsap.set(rows, { opacity: 0, x: -30 });
-            // Animate to visible
             gsap.to(rows, {
               opacity: 1,
               x: 0,
               duration: 0.5,
               stagger: 0.05,
               ease: 'power2.out',
-              clearProps: 'all', // Clear all properties after animation
+              clearProps: 'all',
             });
           }
         }
@@ -156,7 +161,7 @@ const ProductsGrid = ({ view = 'grid', filters = {} }) => {
           </div>
         </div>
 
-        {/* Loading Overlay - Only show when reloading with existing products */}
+        {/* Loading Overlay */}
         {loading && products.length > 0 && (
           <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-10">
             <div className="w-8 h-8 border-2 border-black/20 border-t-black rounded-full animate-spin" />
@@ -202,10 +207,7 @@ const ProductsGrid = ({ view = 'grid', filters = {} }) => {
                     <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
                       <Link
                         href={`/admin/products/edit/${product._id}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // console.log('Editing product:', product._id);
-                        }}
+                        onClick={(e) => e.stopPropagation()}
                         className="w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-black hover:text-white transition-colors text-sm"
                         title="Edit product"
                       >
@@ -256,7 +258,7 @@ const ProductsGrid = ({ view = 'grid', filters = {} }) => {
                         <p className="text-xs text-black/50 mt-1">{product.sku}</p>
                       </div>
                       {product.rating?.average > 0 && (
-                        <div className="flex items-center gap-1 text-xs ml-2">
+                        <div className="flex items-center gap-1 text-xs ml-2 bg-yellow-50 px-2 py-1 rounded-full">
                           <span>⭐</span>
                           <span className="font-medium">{product.rating.average.toFixed(1)}</span>
                         </div>
@@ -265,14 +267,16 @@ const ProductsGrid = ({ view = 'grid', filters = {} }) => {
 
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-lg font-bold text-black">
-                        {product.currency || '$'} {product.price}
+                        {formatINR(product.price)}
                       </span>
-                      <span className="text-xs text-black/50">{product.stock} in stock</span>
+                      <span className="text-xs text-black/50 bg-black/5 px-2 py-1 rounded-full">
+                        {product.stock} in stock
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-black/50 mb-3">
-                      <span>{product.category}</span>
-                      <span>{product.purchases || 0} sold</span>
+                      <span className="capitalize">{product.category}</span>
+                      <span className="font-medium text-green-600">{product.purchases || 0} sold</span>
                     </div>
 
                     {/* Action Buttons */}
@@ -294,10 +298,14 @@ const ProductsGrid = ({ view = 'grid', filters = {} }) => {
                     {/* Stock Progress */}
                     <div className="mt-3 h-1 bg-black/5 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-black rounded-full transition-all duration-500"
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          product.stock === 0 ? 'bg-red-500' :
+                          product.stock < 10 ? 'bg-yellow-500' :
+                          'bg-green-500'
+                        }`}
                         style={{
                           width: `${Math.min((product.stock / 100) * 100, 100)}%`,
-                          opacity: product.stock === 0 ? 0.2 : 1,
+                          opacity: product.stock === 0 ? 0.5 : 1,
                         }}
                       />
                     </div>
@@ -350,13 +358,13 @@ const ProductsGrid = ({ view = 'grid', filters = {} }) => {
                           {product.name}
                         </h3>
                         <p className="text-xs text-black/50 mt-1">{product.sku}</p>
-                        <p className="text-xs text-black/40 mt-1">{product.category}</p>
+                        <p className="text-xs text-black/40 mt-1 capitalize">{product.category}</p>
                       </div>
 
                       <div>
                         <p className="text-xs text-black/50 mb-1">Price</p>
                         <p className="text-lg font-bold text-black">
-                          {product.currency || '$'} {product.price}
+                          {formatINR(product.price)}
                         </p>
                       </div>
 
@@ -373,9 +381,9 @@ const ProductsGrid = ({ view = 'grid', filters = {} }) => {
                       <div>
                         <p className="text-xs text-black/50 mb-1">Sales</p>
                         <div className="flex items-center gap-3">
-                          <p className="text-sm font-semibold text-black">{product.purchases || 0}</p>
+                          <p className="text-sm font-semibold text-green-600">{product.purchases || 0}</p>
                           {product.rating?.average > 0 && (
-                            <div className="flex items-center gap-1 text-xs">
+                            <div className="flex items-center gap-1 text-xs bg-yellow-50 px-2 py-1 rounded-full">
                               <span>⭐</span>
                               <span className="font-medium">{product.rating.average.toFixed(1)}</span>
                             </div>
